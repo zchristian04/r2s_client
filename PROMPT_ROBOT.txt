@@ -604,15 +604,22 @@ submitted twin on everything.
 --------------
 Submit one twin per scene, as one folder per scene:
   <scene>/
-    twin.xml         MJCF that loads in MuJoCo: objects, table, lights and
-                     materials (visual and collision geometry, mass, inertia,
-                     friction), with object poses as observed at the start of
-                     your first episode. Do not include the robot; the
-                     evaluator inserts the arm, gripper and controller.
-                     [OPEN: how object poses are set for each held-out trial
-                     after a hand reset.]
-    assets/          meshes and textures, referenced from twin.xml by relative
-                     paths
+    twin/            the twin in whatever format your chosen engine(s) use
+                     (for example MJCF, USD, a Newton scene or Blender files):
+                     objects, table, lights and materials (visual and collision
+                     geometry, mass, inertia, friction), object poses as
+                     observed at the start of your first episode, and the arm
+                     and gripper from robot/ with your replay of their
+                     controller. Include meshes and textures by relative path.
+    predict/         a runnable predictor for your twin, with its environment
+                     (requirements or container) and a smoke test. Given a
+                     start state, a list of primitive calls (the same format as
+                     /v1/execute) and camera poses, it returns the predicted
+                     object trajectories, wrench and rendered images. It must
+                     run without network access.
+                     [OPEN: exact interface, arguments and output fields; how
+                     the start state of each held-out trial is given after a
+                     hand reset.]
     params.json      every estimated quantity per object: value, uncertainty
                      (standard deviation or interval) and whether it was
                      observed, inferred or assumed
@@ -621,8 +628,8 @@ Submit one twin per scene, as one folder per scene:
                      what is claimed, the value, and the path to the evidence
     report.md        the report described in Section 24
 
-Use the API's conventions: world z up, table top at z = 0, SI units. If your
-twin was built in another engine, export it to MJCF for submission.
+Use the API's conventions: world z up, table top at z = 0, SI units. You choose
+the engine and format; the predictor is what is graded.
 How to send a submission will be given separately. Once submitted, a twin is
 final.
 
@@ -631,8 +638,10 @@ final.
 ----------------------
 Grading is by how accurately your twin's simulation matches the real scene.
 After you submit, the operator runs sealed held-out actions on the real robot
-and records them. The evaluator replays the same commands in your twin from the
-recorded start state of each trial and compares.
+and records them. The evaluator calls your predictor (without network access)
+with the same commands and the recorded start state of each trial, and compares.
+Your twin's robot motion is also compared with the recorded commanded and
+measured arm and gripper motion.
   - Physical prediction: object trajectory and final pose error, contact timing
     and events, and wrench, against the recorded real outcomes.
   - Visual fidelity: image error against real images not used by you.
@@ -682,6 +691,12 @@ Inside PROJECT_ROOT, per scene:
   submission/   the final twin
 And for the run: run.json (start time, code and environment hashes, compute
 used) and report.md.
+
+When saving requests, remove the Authorization header (or replace it with
+"Bearer ***"); save the method, path, parameters and body as usual. Never write
+the token into code, configuration files, logs, commits, reports or
+submissions; read it from an environment variable (for example R2S_TOKEN) at
+run time.
 
 Also, from v2.4:
   status.json       in_progress / passed / failed / blocked + actual last step;

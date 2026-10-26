@@ -522,13 +522,20 @@ submitted twin on everything.
 --------------
 Submit one twin per seed, as one folder per seed:
   <seed>/
-    twin.xml         MJCF that loads in MuJoCo: objects, table, lights and
-                     materials (visual and collision geometry, mass, inertia,
-                     friction), with object poses at the canonical episode-0
-                     state. Do not include the robot; the evaluator inserts the
-                     gripper and its controller.
-    assets/          meshes and textures, referenced from twin.xml by relative
-                     paths
+    twin/            the twin in whatever format your chosen engine(s) use
+                     (for example MJCF, USD, a Newton scene or Blender files):
+                     objects, table, lights and materials (visual and collision
+                     geometry, mass, inertia, friction), object poses at the
+                     canonical episode-0 state, and the robot from robot/ with
+                     your replay of its controller. Include meshes and textures
+                     by relative path.
+    predict/         a runnable predictor for your twin, with its environment
+                     (requirements or container) and a smoke test. Given a list
+                     of primitive calls (the same format as /v1/execute) and
+                     camera poses, starting from the canonical episode-0 state,
+                     it returns the predicted object trajectories, wrench and
+                     rendered images. It must run without network access.
+                     [OPEN: exact interface, arguments and output fields.]
     params.json      every estimated quantity per object: value, uncertainty
                      (standard deviation or interval) and whether it was
                      observed, inferred or assumed
@@ -537,8 +544,8 @@ Submit one twin per seed, as one folder per seed:
                      what is claimed, the value, and the path to the evidence
     report.md        the report described in Section 22
 
-Use the API's conventions: world z up, table top at z = 0, SI units. If your
-twin was built in another engine, export it to MJCF for submission.
+Use the API's conventions: world z up, table top at z = 0, SI units. You choose
+the engine and format; the predictor is what is graded.
 How to send a submission will be given separately. Once submitted, a twin is
 final.
 
@@ -546,8 +553,10 @@ final.
 18. How You Are Graded
 ----------------------
 The evaluator holds sealed actions and camera views for each seed that you never
-see. It starts your twin and the source world from the canonical episode-0
-state, replays the sealed actions and renders the sealed views.
+see. It starts the source world from the canonical episode-0 state, runs the
+sealed actions and renders the sealed views there, and calls your predictor
+(without network access) with the same actions and camera poses. Your twin's
+robot motion is also compared with the commanded and measured motion.
   - Physical prediction: object trajectory and final pose error, contact timing
     and events, and wrench, on the sealed actions.
   - Visual fidelity: image error on the sealed views.
@@ -595,6 +604,12 @@ Inside PROJECT_ROOT, per seed:
   submission/   the final twin
 And for the run: run.json (start time, code and environment hashes, compute
 used) and report.md.
+
+When saving requests, remove the Authorization header (or replace it with
+"Bearer ***"); save the method, path, parameters and body as usual. Never write
+the token into code, configuration files, logs, commits, reports or
+submissions; read it from an environment variable (for example R2S_TOKEN) at
+run time.
 
 Also, from v2.4:
   status.json       in_progress / passed / failed / blocked + actual last step;
