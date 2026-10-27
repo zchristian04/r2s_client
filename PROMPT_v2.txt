@@ -233,6 +233,10 @@ IDENTIFICATION_BACKEND=<VERIFY: differentiable MJX/Syilen or other tested engine
 RENDER_BACKEND=<VERIFY: a working RGB/RGB-D renderer; Blender/Cycles optional>
 MJX_LAB_SIM_DIR=<VERIFY: expected /home/jiaxin/projects/Syilen; read-only>
 MJX_LAB_SIM_COMMIT=<VERIFY>
+# Before choosing a parameter fitter, spend a bounded effort reading the entry
+# point of MJX_LAB_SIM_DIR and running a minimal contact example. Try the
+# differentiable route first. If its gradients fail the finite-difference
+# check, fall back to a derivative-free fit and label it as such.
 MUJOCO_VERSION/MJX_VERSION/JAX_VERSION/CUDA=<VERIFY per actual environment>
 ISAAC_SIM_ROOT/ISAAC_SIM_VERSION=<VERIFY if available; never assume installation>
 NEWTON_ROOT/NEWTON_VERSION=<VERIFY if available; never assume capabilities>
@@ -361,7 +365,8 @@ Perform a fast resource check, not a prolonged infrastructure project:
   3. Verify the selected engine's stepping, contact, action replay and timing;
      test gradients on a tiny contact problem if differentiable fitting is
      claimed.
-  4. Call /v1/info and /v1/calibration and confirm what the API provides.
+  4. Call /v1/info and /v1/calibration and confirm what the API provides, and
+     read /v1/budget and plan it as described in Section 23.
   5. Create a fresh run only inside PROJECT_ROOT/outputs; save config/source/
      environment hashes.
 Missing Isaac Sim, Mitsuba or photorealistic lights are not grounds to postpone
@@ -398,8 +403,8 @@ Differentiable fitting is a graded milestone, not a requirement. If you claim it
 show that gradients through contact were checked against finite differences.
 A derivative-free fit is fine; just label it as such.
 
-You may call language or vision models inside your pipeline. Log every call
-(model, input, output).
+You may call language or vision models while building your twin, but never
+inside the predictor. Log every call (model, input, output).
 
 Details of each step (from v2.4):
   - Observe & inspect everything: autonomously examine the accessible scene,
@@ -535,7 +540,10 @@ Submit one twin per seed, as one folder per seed:
                      camera poses, starting from the canonical episode-0 state,
                      it returns the predicted object trajectories, wrench and
                      rendered images. It must run without network access.
-                     [OPEN: exact interface, arguments and output fields.]
+                     [OPEN: exact interface, arguments and output fields.] 
+                     Predictor rules: it must not call any language or vision
+                     model or any network service, and it may read only files
+                     inside its own submission folder.
     params.json      every estimated quantity per object: value, uncertainty
                      (standard deviation or interval) and whether it was
                      observed, inferred or assumed
@@ -543,6 +551,30 @@ Submit one twin per seed, as one folder per seed:
     claims.json      every claim you make about your twin, one entry each:
                      what is claimed, the value, and the path to the evidence
     report.md        the report described in Section 22
+
+File formats (one JSON object per entry; field names are required):
+
+params.json is a list of entries such as
+  {"object": "obj_0", "name": "friction_slide", "value": 0.42,
+   "unit": "1", "uncertainty": {"type": "interval", "low": 0.35, "high": 0.50},
+   "status": "inferred", "evidence": "fits/fit_003.json"}
+where status is exactly one of "observed", "inferred", "assumed".
+
+claims.json is a list of entries such as
+  {"claim": "object mass is 0.31 kg", "value": 0.31, "unit": "kg",
+   "status": "inferred", "evidence": "fits/fit_002.json"}
+
+probe_log.jsonl has one JSON object per line. Each probe writes two lines with
+the same probe_id, appended and never edited. Before the action:
+  {"probe_id": "p001", "phase": "plan", "time": "<ISO 8601>",
+   "beliefs": "...", "uncertain": ["..."],
+   "candidates": [{"action": {"primitive": "push", "params": {}},
+                   "expected_reveal": "...", "rejected_because": null}],
+   "chosen": 0, "reason": "...", "decision_source": "judgement|script|both"}
+After the result:
+  {"probe_id": "p001", "phase": "result", "time": "<ISO 8601>",
+   "request_file": "requests/0007.json", "status": "ok",
+   "learned": "..."}
 
 Use the API's conventions: world z up, table top at z = 0, SI units. You choose
 the engine and format; the predictor is what is graded.
@@ -660,13 +692,41 @@ never a reason to declare the research goal complete.
 Keep normal progress updates brief; continue implementation rather than asking
 for permission at every minor simulated adjustment within the approved task.
 
+23. Budget planning
+-------------------
+Read /v1/info and /v1/budget before the first action to learn the budget's
+units and what a reset costs; do not assume. Save the raw values and write a
+short allocation plan. As a starting point:
+  - About half of the budget for exploration probes. Do cheap, low-risk,
+    high-information actions first.
+  - About one third for validation actions, chosen after your first twin
+    exists, targeting what the twin is least sure about. Before executing each
+    validation action, save your twin's prediction to a file; compare it with
+    the source-world result afterwards. Do not fit on a validation action before you
+    have recorded the prediction.
+  - The remainder as a reserve for protective stops and failed actions.
+After every contact action, record the remaining budget and re-observe the
+object pose, because the action changes it. When only the reserve is left,
+stop exploring and move to final fitting, validation and the report. Do not
+skip validation to save budget. Make the executed actions diverse (different
+directions, speeds and contact points), otherwise the leave-one-out check in
+Section 16 says little.
 
-23. When You Are Done
+24. When You Are Done
 ---------------------
 You are done with a seed when you have submitted its twin. You decide when the
 twin is good enough, within your budget. Report precisely what you could and
 could not infer; an honest partial result is worth more than a confident wrong
 one.
+
+25. Fallback Draft
+-------------------------------------
+Fallback: submission is final, and a long run can be interrupted (context
+limit, crash, time limit). After your first probe, place a crude but runnable
+twin and predictor in submission/ (the predictor must pass its smoke test) and
+overwrite it with each accepted improvement. Add "draft": true to every 
+claims.json entry while the submission is only a fallback draft. A fallback
+draft is not the official submission, which remains an explicit final step.
 
 Final instruction to the agent
 ------------------------------
