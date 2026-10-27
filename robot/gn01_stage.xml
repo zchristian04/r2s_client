@@ -1,0 +1,118 @@
+<mujoco model="gn01_stage">
+  <compiler angle="radian" autolimits="true"/>
+  <worldbody>
+    <geom name="table_top" type="plane" size="0.6 0.6 0.01" rgba="0.55 0.47 0.38 1"/>
+  
+    <body name="r2s_stage" pos="0 0 0" gravcomp="1">
+      <inertial pos="0 0 0" mass="0.5" diaginertia="0.002 0.002 0.002"/>
+      <joint name="r2s_x" type="slide" axis="1 0 0" range="-0.35 0.35" damping="150.0" armature="0.01"/>
+      <joint name="r2s_y" type="slide" axis="0 1 0" range="-0.35 0.35" damping="150.0" armature="0.01"/>
+      <joint name="r2s_z" type="slide" axis="0 0 1" range="0.30211999999999994 0.72212" damping="150.0" armature="0.01"/>
+      <joint name="r2s_yaw" type="hinge" axis="0 0 1" range="-3.2 3.2" damping="3.0" armature="0.001"/>
+      <body name="r2s_tool" gravcomp="1">
+        <site name="r2s_ft" pos="0 0 0" size="0.005"/>
+        <site name="r2s_tcp" pos="0 0 -0.32211999999999996" size="0.003" rgba="1 0 0 0.5"/>
+        <camera name="wrist" pos="-0.065 0 -0.155" xyaxes="0 -1 0 0.923742 0 0.383015" fovy="70"/>
+        <body name="r2s_link7" quat="0 1 0 0" gravcomp="1">
+          
+                    <body gravcomp="1" name="r2s_lab_gn01_tool" pos="0.000000 0.000000 0.124000" quat="-0.00000000 0.00000000 -0.00000000 -1.00000000">
+                      <site name="r2s_lab_gn01_tcp_site" group="4" type="sphere" size="0.006" pos="0 0 0.15" rgba="0.0 0.8 0.2 1" />
+                      <site name="r2s_lab_gn01_closed_tcp_site" group="4" type="sphere" size="0.006" pos="0 0 0.20" rgba="0.9 0.6 0.0 1" />
+                      <site name="r2s_gn01_grasp_center_site" group="4" type="sphere" size="0.008" pos="0.0 0.0 0.198120" rgba="0.0 0.9 0.2 1" />
+                      <body gravcomp="1" name="r2s_gn01_articulated_root" pos="0 0 0" quat="1 0 0 0">
+                        <body gravcomp="1" name="r2s_gn01_unused_finger_width_link" pos="0 0 0">
+                          <joint name="r2s_gn01_finger_width_joint" type="slide" axis="1 0 0" range="0 0.100" damping="0.03" armature="0.001" />
+                          <geom name="r2s_gn01_unused_finger_width_mass" type="sphere" size="0.001" mass="0.0001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                        </body>
+                        <geom density="299.262" name="r2s_gn01_base_visual" type="mesh" mesh="r2s_gn01_visual_base_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                        <geom density="299.262" name="r2s_gn01_base_collision" type="mesh" mesh="r2s_gn01_collision_base_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_lab_collision" group="3" contype="0" conaffinity="0" />
+                        <geom density="299.262" name="r2s_gn01_static_assembly_collision" type="mesh" mesh="r2s_gn01_collision_static_assembly_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_lab_collision" group="3" contype="0" conaffinity="0" />
+                        <body gravcomp="1" name="r2s_gn01_left_outer_bar_body" pos="0 -0.0325 0.0825">
+                          <joint name="r2s_gn01_left_outer_knuckle_joint" type="hinge" axis="1 0 0" range="-0.155 0.7854" damping="0.1" armature="0.002" />
+                          <geom density="299.262" name="r2s_gn01_left_outer_bar_visual" type="mesh" mesh="r2s_gn01_visual_outer_bar_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                          <geom density="299.262" name="r2s_gn01_left_outer_bar_collision" type="mesh" mesh="r2s_gn01_collision_outer_bar_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_lab_collision" group="3" contype="0" conaffinity="0" />
+                          <body gravcomp="1" name="r2s_gn01_left_finger_mount_body" pos="0 0 0.058">
+                            <joint name="r2s_gn01_left_inner_finger_joint" type="hinge" axis="1 0 0" range="-0.7854 0.155" damping="0.1" armature="0.002" />
+                            <geom density="299.262" name="r2s_gn01_left_finger_mount_visual" type="mesh" mesh="r2s_gn01_visual_finger_mount_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                            <body gravcomp="1" name="r2s_gn01_left_finger_tip_body" pos="0 0.010 0.0235">
+                              <geom density="299.262" name="r2s_gn01_left_finger_tip_visual" type="mesh" mesh="r2s_gn01_visual_finger_tip_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_gn01_tip" group="1" contype="0" conaffinity="0" />
+                              <geom name="r2s_gn01_left_finger_tip_collision" type="box" quat="0.015600 -0.002800 0.113800 0.993400" material="r2s_lab_collision" group="3" contype="2" conaffinity="1" friction="1.0 0.50 0.02" solref="0.001 1" solimp="0.999 0.9999 0.0001" mass="0.02" pos="0.000104 -0.001030 0.014135" size="0.007400 0.010700 0.018680" />
+                            </body>
+                          </body>
+                        </body>
+                        <body gravcomp="1" name="r2s_gn01_left_inner_bar_body" pos="0 -0.0165 0.0995">
+                          <joint name="r2s_gn01_left_inner_knuckle_joint" type="hinge" axis="1 0 0" range="-0.155 0.7854" damping="0.1" armature="0.002" />
+                          <geom density="299.262" name="r2s_gn01_left_inner_bar_visual" type="mesh" mesh="r2s_gn01_visual_inner_bar_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                          <geom density="299.262" name="r2s_gn01_left_inner_bar_collision" type="mesh" mesh="r2s_gn01_collision_inner_bar_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_lab_collision" group="3" contype="0" conaffinity="0" />
+                        </body>
+                        <body gravcomp="1" name="r2s_gn01_right_outer_bar_body" pos="0 0.0325 0.0825" quat="0 0 0 1">
+                          <joint name="r2s_gn01_right_outer_knuckle_joint" type="hinge" axis="1 0 0" range="-0.155 0.7854" damping="0.1" armature="0.002" />
+                          <geom density="299.262" name="r2s_gn01_right_outer_bar_visual" type="mesh" mesh="r2s_gn01_visual_outer_bar_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                          <geom density="299.262" name="r2s_gn01_right_outer_bar_collision" type="mesh" mesh="r2s_gn01_collision_outer_bar_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_lab_collision" group="3" contype="0" conaffinity="0" />
+                          <body gravcomp="1" name="r2s_gn01_right_finger_mount_body" pos="0 0 0.058">
+                            <joint name="r2s_gn01_right_inner_finger_joint" type="hinge" axis="1 0 0" range="-0.7854 0.155" damping="0.1" armature="0.002" />
+                            <geom density="299.262" name="r2s_gn01_right_finger_mount_visual" type="mesh" mesh="r2s_gn01_visual_finger_mount_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                            <body gravcomp="1" name="r2s_gn01_right_finger_tip_body" pos="0 0.010 0.0235">
+                              <geom density="299.262" name="r2s_gn01_right_finger_tip_visual" type="mesh" mesh="r2s_gn01_visual_finger_tip_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_gn01_tip" group="1" contype="0" conaffinity="0" />
+                              <geom name="r2s_gn01_right_finger_tip_collision" type="box" quat="0.015600 -0.002800 0.113800 0.993400" material="r2s_lab_collision" group="3" contype="2" conaffinity="1" friction="1.0 0.50 0.02" solref="0.001 1" solimp="0.999 0.9999 0.0001" mass="0.02" pos="0.000104 -0.001030 0.014135" size="0.007400 0.010700 0.018680" />
+                            </body>
+                          </body>
+                        </body>
+                        <body gravcomp="1" name="r2s_gn01_right_inner_bar_body" pos="0 0.0165 0.0995" quat="0 0 0 1">
+                          <joint name="r2s_gn01_right_inner_knuckle_joint" type="hinge" axis="1 0 0" range="-0.155 0.7854" damping="0.1" armature="0.002" />
+                          <geom density="299.262" name="r2s_gn01_right_inner_bar_visual" type="mesh" mesh="r2s_gn01_visual_inner_bar_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                          <geom density="299.262" name="r2s_gn01_right_inner_bar_collision" type="mesh" mesh="r2s_gn01_collision_inner_bar_mesh" quat="0.70710678 0 0 0.70710678" material="r2s_lab_collision" group="3" contype="0" conaffinity="0" />
+                        </body>
+                      </body>
+                    </body>
+                    <geom mass="0" name="r2s_lab_gn01_flange_visual" type="cylinder" pos="0 0 0.083" size="0.050 0.010" material="r2s_lab_flange_silver" contype="0" conaffinity="0" group="1" />
+                    <geom mass="0" name="r2s_lab_link7_to_gn01_adapter_visual" type="cylinder" pos="0 0 0.120" size="0.040 0.045" material="r2s_gn01_visual_dark" contype="0" conaffinity="0" group="1" />
+
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <asset>
+    <material name="r2s_lab_collision" rgba="0.05 0.45 0.25 0.55"/>
+    <material name="r2s_lab_flange_silver" rgba="0.62 0.64 0.62 1"/>
+    
+    <material name="r2s_gn01_black" rgba="0.015 0.015 0.018 1" />
+    <material name="r2s_gn01_visual_dark" rgba="0.0150 0.0150 0.0140 1.0000" />
+    <material name="r2s_gn01_tip" rgba="0.0350 0.0330 0.0300 1.0000" />
+    <material name="r2s_gn01_tcp" rgba="0.0 0.8 0.2 1" />
+    <mesh name="r2s_gn01_visual_base_mesh" file="gn01/visual/base.stl" scale="0.001 0.001 0.001" />
+    <mesh name="r2s_gn01_visual_outer_bar_mesh" file="gn01/visual/outer_bar.stl" scale="0.001 0.001 0.001" />
+    <mesh name="r2s_gn01_visual_inner_bar_mesh" file="gn01/visual/inner_bar.stl" scale="0.001 0.001 0.001" />
+    <mesh name="r2s_gn01_visual_finger_mount_mesh" file="gn01/visual/finger_mount.stl" scale="0.001 0.001 0.001" />
+    <mesh name="r2s_gn01_visual_finger_tip_mesh" file="gn01/visual/finger_tip.obj" scale="0.001 0.001 0.001" />
+    <mesh name="r2s_gn01_collision_base_mesh" file="gn01/collision/base.stl" scale="0.001 0.001 0.001" />
+    <mesh name="r2s_gn01_collision_outer_bar_mesh" file="gn01/collision/outer_bar.stl" scale="0.001 0.001 0.001" />
+    <mesh name="r2s_gn01_collision_inner_bar_mesh" file="gn01/collision/inner_bar.stl" scale="0.001 0.001 0.001" />
+    <mesh name="r2s_gn01_collision_finger_tip_mesh" file="gn01/collision/finger_tip.stl" scale="0.001 0.001 0.001" />
+    <mesh name="r2s_gn01_collision_static_assembly_mesh" file="gn01/collision/static_assembly.stl" scale="0.001 0.001 0.001" />
+  
+  </asset>
+  <equality>
+    
+    <joint name="r2s_gn01_left_outer_from_width" joint1="r2s_gn01_left_outer_knuckle_joint" joint2="r2s_gn01_finger_width_joint" polycoef="-0.155 9.404 0 0 0" solref="0.001 1" solimp="0.99 0.999 0.0002" />
+    <joint name="r2s_gn01_left_inner_knuckle_mimic" joint1="r2s_gn01_left_inner_knuckle_joint" joint2="r2s_gn01_left_outer_knuckle_joint" polycoef="0 1 0 0 0" solref="0.001 1" solimp="0.99 0.999 0.0002" />
+    <joint name="r2s_gn01_left_inner_finger_mimic" joint1="r2s_gn01_left_inner_finger_joint" joint2="r2s_gn01_left_outer_knuckle_joint" polycoef="0 -1 0 0 0" solref="0.001 1" solimp="0.99 0.999 0.0002" />
+    <joint name="r2s_gn01_right_outer_knuckle_mimic" joint1="r2s_gn01_right_outer_knuckle_joint" joint2="r2s_gn01_left_outer_knuckle_joint" polycoef="0 1 0 0 0" solref="0.001 1" solimp="0.99 0.999 0.0002" />
+    <joint name="r2s_gn01_right_inner_knuckle_mimic" joint1="r2s_gn01_right_inner_knuckle_joint" joint2="r2s_gn01_left_outer_knuckle_joint" polycoef="0 1 0 0 0" solref="0.001 1" solimp="0.99 0.999 0.0002" />
+    <joint name="r2s_gn01_right_inner_finger_mimic" joint1="r2s_gn01_right_inner_finger_joint" joint2="r2s_gn01_left_outer_knuckle_joint" polycoef="0 -1 0 0 0" solref="0.001 1" solimp="0.99 0.999 0.0002" />
+  
+  </equality>
+  <actuator>
+    <position name="r2s_x" joint="r2s_x" kp="4000.0"/>
+    <position name="r2s_y" joint="r2s_y" kp="4000.0"/>
+    <position name="r2s_z" joint="r2s_z" kp="4000.0"/>
+    <position name="r2s_yaw" joint="r2s_yaw" kp="60.0"/>
+    <position name="r2s_width" joint="r2s_gn01_finger_width_joint" kp="5000.0" kv="50.0"
+              ctrlrange="0 0.1" forcerange="-25.0 25.0"/>
+  </actuator>
+  <sensor>
+    <force name="r2s_ft_force" site="r2s_ft"/>
+    <torque name="r2s_ft_torque" site="r2s_ft"/>
+  </sensor>
+</mujoco>

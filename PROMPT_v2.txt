@@ -248,8 +248,11 @@ MITSUBA_ENV=<VERIFY if a fitting experiment requires it>
 ROBOT_MODEL=Flexiv Rizon 4s with a Flexiv Grav (GN01) gripper. In this run only
   the gripper is simulated, on a floating Cartesian stage with yaw.
 gripper=Flexiv Grav (GN01) parallel-jaw gripper
-FT_SENSOR=<VERIFY: wrist force/torque as reported by /v1/execute; frame and bias>
-ROBOT_URDF_MJCF=<FILL: gripper model files to be provided with this prompt>
+FT_SENSOR=wrist force/torque at the tool flange, reported by /v1/execute as
+  "wrench", tared at the start of each action (see robot/README.md); VERIFY
+  its frame and bias from your own data
+ROBOT_URDF_MJCF=robot/gn01_stage.xml (MuJoCo; meshes in robot/gn01/, frames and
+  controller in robot/README.md)
 
 Important sensor contract: The brief assumes calibrated RGB-D, synchronized
 robot states, commands and force/torque. If the actual setup exposes only RGB,
@@ -535,15 +538,12 @@ Submit one twin per seed, as one folder per seed:
                      your replay of its controller. Include meshes and textures
                      by relative path.
     predict/         a runnable predictor for your twin, with its environment
-                     (requirements or container) and a smoke test. Given a list
-                     of primitive calls (the same format as /v1/execute) and
-                     camera poses, starting from the canonical episode-0 state,
-                     it returns the predicted object trajectories, wrench and
-                     rendered images. It must run without network access.
-                     [OPEN: exact interface, arguments and output fields.] 
-                     Predictor rules: it must not call any language or vision
-                     model or any network service, and it may read only files
-                     inside its own submission folder.
+                     (requirements or container), a README saying how to set it
+                     up, and a smoke test. Interface below. Predictor rules: it
+                     must not call any language or vision model or any network
+                     service, and apart from the request and output paths it is
+                     given, it may read only files inside its own submission
+                     folder.
     params.json      every estimated quantity per object: value, uncertainty
                      (standard deviation or interval) and whether it was
                      observed, inferred or assumed
@@ -576,10 +576,38 @@ After the result:
    "request_file": "requests/0007.json", "status": "ok",
    "learned": "..."}
 
+Predictor interface. The evaluator runs, from submission/<seed>/predict/:
+  python predict.py --request request.json --out <dir>
+request.json:
+  {"episodes": [{"actions": [{"primitive": "...", "params": {...}}, ...]}, ...],
+   "views":    [{"name": "...", "width": W, "height": H, "K": [[3x3]],
+                 "T_world_cam": [[4x4]]}, ...],
+   "dt": <sample period in s, the logging rate from /v1/info>}
+  Every episode starts from the canonical episode-0 state and runs its actions
+  in order (an episode may hold one action or several). Actions use exactly the
+  format of /v1/execute. Cameras use the OpenCV convention, as in
+  /v1/calibration; T_world_cam maps camera to world coordinates. Views are
+  rendered at the canonical episode-0 state, before any action.
+Write to <dir>:
+  episodes/<e>/action_<k>.npz  (e, k zero-based) with arrays
+      t [T], tcp [T,3], yaw [T], width [T], wrench [T,6] (tool frame at the
+      flange, [Fx Fy Fz Tx Ty Tz], as the API reports it), obj_pos [T,N,3],
+      obj_quat [T,N,4] (w,x,y,z, world frame), sampled every dt from the start
+      of the action, and a JSON string "meta" with status ("ok" or
+      "protective_stop") and events, named as in the API.
+  views/<name>.npz with rgb uint8 [H,W,3] and depth float32 [H,W] in metres
+      (0 = invalid).
+  objects.json: the object names in the order of the N axis.
+The predictor runs without network access, within 10 minutes per call. A GPU
+may be present but is not guaranteed; say in predict/README whether yours needs
+one and fall back to CPU if it can. If an action fails in your twin, write what
+you have and set status to "error" with a message; do not crash the whole call.
+
 Use the API's conventions: world z up, table top at z = 0, SI units. You choose
 the engine and format; the predictor is what is graded.
-How to send a submission will be given separately. Once submitted, a twin is
-final.
+For this run, leave each seed's folder in submission/<seed>/ under PROJECT_ROOT;
+the operator collects it after the run. A twin is final once you write it there
+and mark the seed as submitted in status.json.
 
 
 18. How You Are Graded
