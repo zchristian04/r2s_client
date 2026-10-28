@@ -104,7 +104,7 @@ architectural refactors, superficial agent wrappers, or new benchmarks.
 
 3. The Scene
 ------------
-The exam has five levels. This run uses level: L0
+The exam has six levels. This run uses level: L5
 (/v1/info also reports the level of your seeds.)
 
   L0  One rigid object on a table. Its shape, how it rests on the table, mass,
@@ -116,6 +116,18 @@ The exam has five levels. This run uses level: L0
   L3  Articulated objects (for example doors or drawers) whose joint type,
       axis, limits and resistance are unknown.
   L4  An integrated scene combining several objects, occlusion and contact.
+  L5  Full test. Everything from L0-L4 at once, with nothing held fixed between
+      seeds except the gripper, controller and sensors. Several rigid and
+      articulated objects, with occlusion, clutter and objects touching or
+      resting on each other. Unknown per object or part: shape (including
+      undersides, backs and hidden parts), how it rests or is supported, mass,
+      centre of mass, inertia, friction against the table and against other
+      objects, and joint type, axis, limits and resistance. Unknown for the
+      scene: the table's appearance, the background, and the number, type,
+      position, direction, colour and intensity of the lights, including the
+      shadows they cast. Surfaces may carry textures or patterns rather than
+      a single colour, and may differ in shine. Anything you do not measure,
+      treat as unknown.
 
 At every level, object names you might think of (bottle, phone, cup) say nothing
 about shape, mass or which action is right. Decide from what you observe.
@@ -151,8 +163,8 @@ Division of labor:
   clearing an occlusion, using another available camera, or moving a neighbor.
   Numerical solvers: fit mass, friction, supported contact shape, pose, inertia,
   joint parameters and appearance/lighting from observations.
-  Robot controller (server side): execute bounded primitives, with independent
-  safety guards.
+  Robot controller (server side): execute the trajectories you design, within
+  bounded workspace, speed and force limits, with independent safety guards.
   Evaluator (examiner side): assess frozen predictions against hidden truth, not
   supply hints.
 Do not claim a Python heuristic is a learned LLM agent or exact Bayesian EIG.
@@ -178,6 +190,7 @@ top is the plane z = 0.
   POST /v1/observe       {"camera": "cam_0" | "wrist"}
                          returns rgb, depth, t, tcp_meas, yaw_meas
   POST /v1/execute       {"primitive": "...", "params": {...}}
+                         ("trajectory" or a shortcut, see below)
                          returns t, tcp_cmd, tcp_meas, yaw_cmd, yaw_meas,
                          width_cmd, width_meas, wrench, frame_t, frames_rgb,
                          frames_depth; meta has status ("ok" or
@@ -188,20 +201,58 @@ Episode 0 of each seed is the canonical start state. Later episodes start from a
 slightly different object pose. The wrist camera is attached to the tool; its
 extrinsics are given relative to the tool flange.
 
-Primitives (the robot is a floating gripper on a Cartesian stage with yaw):
-  move_to     {tcp: [x,y,z], yaw?, speed?}                         free move
-  home        {}                                                   free move
-  push        {contact_point: [x,y,z], direction: [dx,dy],
-               distance, speed, yaw?}                              contact
-  touch       {point: [x,y,z], direction: [dx,dy,dz], max_travel,
-               speed, stop_force, yaw?}                            contact
-  grasp_lift  {center: [x,y,z], yaw, open_width, lift, hold?}      contact
+Motion: you design every motion yourself. There is no menu of actions to choose
+from. The robot is a floating gripper on a Cartesian stage with yaw, and its
+general command is a trajectory: the path you want the gripper to follow, as a
+list of waypoints that your own code computes (from your scene model, your
+simulator, a fitted hinge, anything). Any manipulation is a trajectory: pushing,
+pulling, grasping, lifting, sliding, tilting, regrasping, opening a door or
+drawer, clearing an obstruction.
 
-Each primitive rises to a safe travel height, moves above its start point, does
-its work and returns to the travel height. A touch stops when the measured force
-exceeds stop_force. Any action stops if the force exceeds the protective limit.
-Parameter ranges are enforced by the server; an invalid call is rejected with a
-message and costs nothing.
+  trajectory  {waypoints: [{tcp: [x,y,z], yaw?, width?, speed?, hold?,
+               stop_force?, stiffness?, yaw_stiffness?}, ...]}   1-50 waypoints
+    tcp            fingertip position to reach (TCP; see robot/)
+    yaw            rotation about world z, in [-pi, pi]; it does not wrap
+    width          jaw opening, 0 (closed) to 0.100 m
+    speed          TCP speed to this waypoint, 0.002-0.10 m/s (default 0.10)
+    hold           seconds to stay at this waypoint once reached (0-2)
+    stop_force     N; if the measured force exceeds it, the robot stops there
+                   and the remaining waypoints are skipped. A waypoint with a
+                   stop force may aim slightly below the table, like a careful
+                   touch; otherwise tcp z must be >= 0.002
+    stiffness      N/m, one number or [kx, ky, kz] in the world frame,
+                   50-4000 (default 4000, stiff)
+    yaw_stiffness  N m/rad, 0.2-60 (default 60, stiff)
+  yaw, width, stiffness and yaw_stiffness carry over to later waypoints until
+  you change them.
+
+The gripper moves smoothly in a straight line from one waypoint to the next.
+There is no automatic approach or retreat: the path between your waypoints is
+exactly what runs, so plan clearances yourself (for example, travel high, then
+descend). With a low stiffness the gripper is held to the path by a spring
+instead of rigidly: a constrained part such as a door or drawer can then steer
+the hand away from the commanded path, and the measured TCP motion and wrench
+show how it moved. When a trajectory ends in compliant mode, the gripper keeps
+the pose it actually reached. The jaws are symmetric, so a grasp at yaw and at
+yaw + pi is the same grasp; choose the one that keeps a turning motion inside
+[-pi, pi]. The jaws close with at most 25 N; any motion stops (protective_stop)
+if the measured force exceeds the protective limit, whatever you asked for.
+
+Shortcuts: fixed trajectories for common motions. Each rises to a safe travel
+height, moves above its start point, does its work and returns to the travel
+height. They are conveniences only; use them or not as you see fit.
+  move_to     {tcp: [x,y,z], yaw?, speed?}
+  home        {}
+  push        {contact_point: [x,y,z], direction: [dx,dy], distance, speed, yaw?}
+  touch       {point: [x,y,z], direction: [dx,dy,dz], max_travel, speed,
+               stop_force, yaw?}
+  grasp_lift  {center: [x,y,z], yaw, open_width, lift, hold?}
+
+Budget: a trajectory is charged after it runs, as a contact action if the
+gripper touched anything (including the table) and as a free move otherwise;
+it needs at least one contact action left to start. Shortcuts are charged by
+type (/v1/info lists contact_primitives). Parameter ranges are enforced by the
+server; an invalid call is rejected with a message and costs nothing.
 
 The robot is a Flexiv Grav (GN01) gripper on a floating Cartesian stage with
 yaw; its model files are in robot/.
@@ -343,9 +394,10 @@ When comparing candidates, consider task-relevant uncertainty reduction,
 expected future physical-prediction benefit, cost and risk; optionally refine
 top candidates with short hypothesis-conditioned rollouts or local parameter
 optimization (brief Eqs. 5-7). Use exact EIG only with a justified probability
-model; otherwise call it a heuristic proxy. Cover the supported primitive
-families with a bounded parameter search, not infinite enumeration of every
-continuous pose, and record why candidates were rejected. In occlusion scenes,
+model; otherwise call it a heuristic proxy. You design the motions yourself (Section 5):
+generate a bounded set of candidate trajectories from your current hypotheses,
+not an infinite enumeration of every continuous pose, and record why candidates
+were rejected. In occlusion scenes,
 compare direct inspection/probing against one or more safe de-occlusion plans.
 Never hardcode "the occluder must be moved" or an action by object category;
 decide from current evidence and action value.
@@ -459,6 +511,10 @@ Representation (project brief Eq. 1):
   S = (O, G_vis, G_col, K, theta, T, A_app)
   O: objects/parts; G_vis: visual geometry; G_col: collision geometry;
   K: joints; theta: physical parameters; T: transforms; A_app: appearance/light.
+For L5 every field of S is in scope: all objects and parts, visual and
+collision geometry, joints, physical parameters, transforms, materials,
+textures and lights. Build up to it from a minimal validated version; do not
+skip validation of the simpler fields to reach the full model.
 For L0 use a minimal validated version: object/support identities, observed
 pose, simple G_vis and G_col, contact region, mass/friction prior versus
 estimate, evidence provenance, uncertainty and timestamps. Keep absent fields
@@ -550,6 +606,15 @@ assets. A scene is not automatically accepted merely because it compiled.
       occlusion -> choose a reveal action -> update canonical belief -> predict
       an unobserved target contact. Never tie an appearance category to a
       scripted collision/grasp answer or privileged physical prior.
+  L5 (all experiments, full twin): reconstruct lighting, textures and
+      materials, shape, mass, centre of mass, inertia, friction and joints for
+      every object and part, in one canonical scene. The goals of L0-L4 all
+      apply. Budgets are shared across many unknowns, so decide which
+      unknowns matter most for image error and for predicting new contacts,
+      and spend actions there. Report per property what you measured, what you
+      only estimated from priors, and what you could not identify; a full twin
+      with honest gaps is a valid result, a full twin with invented values is
+      not.
 
 16. Your Own Validation before Submitting
 -----------------------------------------
