@@ -37,8 +37,13 @@ twin, including MuJoCo/MJX, Isaac Sim, NVIDIA Newton or other suitable engines.
 Do not impose a single simulator or a rendering dependency without a technical
 reason. From the first small scene, reconstruct and compare its objects,
 support, background, basic colors, materials, shadows and illumination — do not
-defer visual verification. High-fidelity renderers and more expressive lighting
-can be added as image residuals show the need. Do not end merely because a
+defer visual verification. Lighting and texture are as important as geometry:
+a twin with the right shapes but a default light, flat average colours or
+shadows painted into its textures does not match the source images, and it
+fails as soon as the view or an object's position changes. Model the lights and
+surface textures explicitly from the start, and add more expressive lighting,
+materials and high-fidelity renderers as image residuals show the need. Do not
+end merely because a
 script ran, an image looks good, a mesh was produced, a loss decreased, or you
 wrote a report. Conversely, do not invent success, cheat by reading held-out
 ground truth, or silently relax metrics.
@@ -60,6 +65,15 @@ A good twin does two things:
 
 A correct mass with wrong shape or lighting is not a finished twin. A good
 render with wrong contact behaviour is not a finished twin either.
+
+Lighting and texture are a core part of the twin, not decoration. The scene's
+lights (how many, what type, where they are, which way they point, their colour
+and intensity, and the shadows they cast) and its surfaces (colours, patterns,
+textures and shine, on the objects, the table and the background) may differ
+between seeds and are unknown until you measure them. They are graded from
+views you never saw and after actions you never ran, where shadows and
+highlights move and hidden surfaces come into view. Reconstruct them with the
+same care as shape and friction (Section 14, "Lighting and texture").
 
 Nobody will tell you which actions to take. You decide what to look at, which
 probes to run, what to fit and when your twin is good enough to submit.
@@ -479,6 +493,35 @@ has better rigid-contact dynamics and another has better rendering, use both
 with a shared canonical scene and verify consistent geometry, camera poses and
 timing, rather than making unrelated scenes.
 
+Lighting and texture (brief Sections III-D and IV-D):
+  - Model lights explicitly. Estimate the number, type (directional, spot,
+    point, area or environment), position, direction, colour and intensity of
+    the lights from the shading, cast shadows (their direction, length and
+    softness) and highlights you observe. Keep competing light hypotheses
+    while the images cannot tell them apart.
+  - Model textures as textures. Where a surface shows a pattern, grain,
+    print or more than one colour, give it a texture map or several materials,
+    not one average colour. Estimate shine (specular level and roughness) from
+    highlights.
+  - Never bake lighting into textures. Shadows and highlights belong to the
+    lights and the geometry; textures carry only the surface's own colour. A
+    texture with a shadow painted on it looks right from one view and is wrong
+    from every other view and after any object moves.
+  - Separate lighting from material. Compare images before and after an object
+    moves, and from different cameras: a shadow or highlight moves with the
+    light, the view or the object's pose, while a texture moves only with its
+    surface. Use such comparisons on purpose; moving an object to reveal its
+    shadow or a hidden surface is a legitimate probe.
+  - Surfaces first seen after an action (an object's back or underside, a
+    region behind an occluder) need their own texture estimate from those
+    images; mark texture you never observed as unobserved, not guessed.
+  - Assume the camera's exposure, white balance and response are fixed (they
+    are part of the provided calibration). Do not fit them per image to make
+    a wrong light or colour look right.
+  - Report lighting and texture errors separately from geometry errors: shadow
+    position and softness, highlight position, and texture-region colour
+    error, each from cameras and object positions not used to fit them.
+
 Versioning: save immutable scene versions with parent/source observation/
 parameter changes, provenance, rejected alternatives and consistent compiled
 assets. A scene is not automatically accepted merely because it compiled.
@@ -619,7 +662,11 @@ sealed actions and renders the sealed views there, and calls your predictor
 robot motion is also compared with the commanded and measured motion.
   - Physical prediction: object trajectory and final pose error, contact timing
     and events, and wrench, on the sealed actions.
-  - Visual fidelity: image error on the sealed views.
+  - Visual fidelity: image error on the sealed views, which include viewpoints
+    and object positions you never observed. Cast shadows (position and
+    softness), highlights and textures are assessed there along with geometry;
+    a default light, flat colours or lighting baked into textures will show up
+    as large errors.
   - Claims: every claim in your report and params.json is checked against the
     truth. Overconfident or wrong claims count against you; honest uncertainty
     does not.
@@ -714,7 +761,11 @@ never a reason to declare the research goal complete.
   3. Which data you used; exactly when each twin was frozen and submitted.
   4. Side-by-side source versus rendered frames, image residuals (geometry,
      colors, shadows/light), and physical errors on your own validation actions
-     with units, compared with your no-probe version.
+     with units, compared with your no-probe version. Include your light model
+     (each light's type, pose, colour and intensity, with uncertainty and the
+     evidence for it), your texture and material model per surface (observed,
+     inferred or unobserved), and lighting and texture residuals reported
+     separately from geometry residuals.
   5. What failed, causal diagnostics, controlled changes and remaining unknowns.
   6. What you could not determine, and why.
   7. Per-seed MP4 videos comparing recorded source-world observations (left)
