@@ -778,6 +778,11 @@ never a reason to declare the research goal complete.
      with units, compared with your no-probe version.
   5. What failed, causal diagnostics, controlled changes and remaining unknowns.
   6. What you could not determine, and why.
+  7. Per-scene MP4 videos comparing recorded real-world camera observations
+     (left) with synchronized digital twin renders (right), including multiple
+     available camera views and representative robot interactions. Save videos
+     under PROJECT_ROOT/outputs/videos/ without requesting extra physical
+     actions solely for video generation; report any unavailable comparisons.
 Keep normal progress updates brief; continue implementation rather than asking
 for permission at every minor simulated adjustment within the approved task.
 
