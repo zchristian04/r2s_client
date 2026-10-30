@@ -319,10 +319,16 @@ claim a backend was tested if it has merely been named in this document.
 -------------------------
 Self-inspect the scene, not merely a human-supplied object list. Inspect its
 geometry, contact areas, support, occlusion, colors, shadows and lighting;
-identify what you need to observe next. Cameras are those listed by /v1/info;
-fixed cameras do not move, and a real camera cannot teleport. If a camera is
-mounted on the robot, log the full camera pose, calibration and visibility for
-every view you take with it. Do not see through objects or claim views you did
+identify what you need to observe next.
+The real setup includes a calibrated ZED 2i RGB-D camera. Verify its
+mounting and any additional available cameras through /v1/info and
+/v1/calibration. Fixed cameras remain stationary. If a robot-mounted
+camera is available, the agent may autonomously select informative
+viewpoints within the verified motion capabilities, subject to operator
+approval and safety constraints (Sections 12-13). Do not assume
+independent camera pitch or roll control unless supported by the API.
+Log the full camera pose, calibration and visibility for each acquired view.
+Do not see through objects or claim views you did
 not capture. Before relying on the calibration, check its date and run a
 reprojection or hand-eye residual check; if the residual is large, report it
 and do not recalibrate on your own.
@@ -370,6 +376,10 @@ Before every contact action, append an entry to your probe log that contains:
   - why you chose this one.
 Write the entry before you send the request. After the result comes back, add
 what you actually learned. Do not edit earlier entries.
+For meaningful camera observations or non-contact movements, also record
+the considered feasible alternatives and selection rationale before
+execution, and the actual outcome afterward. All physical movements
+remain subject to operator approval and safety constraints.
 
 After each result, update your beliefs and decide the next action from the new
 evidence. A fixed sequence decided in advance is not what is being tested.
@@ -418,8 +428,9 @@ Tier 3 — prohibited:
 13. Robot Safety and Approvals
 ------------------------------
   - A person holds the emergency stop at all times while the robot is powered.
-  - Every contact action is reviewed by the operator before it runs. The
-    request waits until it is approved, or returns "rejected" with a reason.
+  - Every physical robot motion, including non-contact movements,
+    camera repositioning and contact actions, requires operator approval.
+    Verify the approval procedure before requesting motion.
     [OPEN: approval per action or per batch, and how a batch is submitted.]
   - The server enforces speed, force, torque, workspace and clearance limits
     and stops the robot on a protective stop. Never try to work around a
@@ -557,7 +568,25 @@ ambiguity where the observation cannot distinguish models. When one simulator
 has better rigid-contact dynamics and another has better rendering, use both
 with a shared canonical scene and verify consistent geometry, camera poses and
 timing, rather than making unrelated scenes.
-
+Lighting and texture:
+  - Model lighting, materials and textures explicitly. Use observed
+    shadows, shading and highlights to estimate light properties and
+    surface reflectance. Keep uncertain parameters marked as uncertain,
+    and do not bake lighting or shadows into textures.
+  - Active Lighting Exploration: The agent should autonomously decide
+    whether additional observations or operator-approved interactions
+    would improve identification of lighting, materials and textures.
+    It should choose informative actions based on expected uncertainty
+    reduction, predictive benefit, safety constraints and the available
+    budget. No specific camera movement or observation trajectory is
+    prescribed.
+  - Inverse Rendering: Inverse rendering is permitted for jointly
+    estimating lighting, geometry, surface reflectance, materials and
+    textures from observed RGB-D images. The agent may independently
+    choose suitable models and optimization methods. Evaluate results
+    on observations not used for fitting, and distinguish improvements
+    in rendered appearance from evidence-supported parameter estimates,
+    including remaining uncertainty.
 Versioning: save immutable scene versions with parent/source observation/
 parameter changes, provenance, rejected alternatives and consistent compiled
 assets. A scene is not automatically accepted merely because it compiled.
@@ -624,13 +653,16 @@ Submit one twin per scene, as one folder per scene:
                      run without network access.
                      [OPEN: exact interface, arguments and output fields; how
                      the start state of each held-out trial is given after a
-                     hand reset.]    
+                     hand reset.]
                      Predictor rules: it must not call any language or vision
                      model or any network service, and it may read only files
                      inside its own submission folder.
     params.json      every estimated quantity per object: value, uncertainty
                      (standard deviation or interval) and whether it was
                      observed, inferred or assumed
+    agent_audit.md   Evidence-based analysis of autonomous decisions,
+                     actions, information value, actual model/tool usage,
+                     failures and human interventions.
     probe_log.jsonl  the log from Section 11
     claims.json      every claim you make about your twin, one entry each:
                      what is claimed, the value, and the path to the evidence
@@ -720,7 +752,8 @@ Inside PROJECT_ROOT, per scene:
   twins/        each twin version you built, with what changed and why
   fits/         fitting inputs, losses, gradients and diagnostics
   compare/      source versus twin images and replayed trajectories
-  submission/   the final twin
+  submission/   the final twin, including agent_audit.md inside
+                each submitted <scene>/ folder (Section 19)
 And for the run: run.json (start time, code and environment hashes, compute
 used) and report.md.
 
@@ -775,7 +808,9 @@ never a reason to declare the research goal complete.
   3. Which data you used; exactly when each twin was frozen and submitted.
   4. Side-by-side source versus rendered frames, image residuals (geometry,
      colors, shadows/light), and physical errors on your own validation actions
-     with units, compared with your no-probe version.
+     with units, compared with your no-probe version. Include the estimated
+     lighting model, per-surface material and texture estimates, their
+     uncertainties, and lighting/texture residuals separately from geometry residuals.
   5. What failed, causal diagnostics, controlled changes and remaining unknowns.
   6. What you could not determine, and why.
   7. Per-scene MP4 videos comparing recorded real-world camera observations
@@ -783,6 +818,18 @@ never a reason to declare the research goal complete.
      available camera views and representative robot interactions. Save videos
      under PROJECT_ROOT/outputs/videos/ without requesting extra physical
      actions solely for video generation; report any unavailable comparisons.
+  8. Autonomous Agent Analysis (`agent_audit.md`):
+     Produce a separate report analyzing the agent's autonomous decisions
+     and methods. For each meaningful action, including camera observations
+     and movements, contact probes and validation actions, explain what was
+     done, why it was selected over alternatives, its expected and actual
+     information value, the outcome, and what was learned or improved.
+     Document the algorithms, models, simulators and tools actually used
+     (e.g., Transformer, VLM, MuJoCo, MJX), including their roles and
+     evidence of use. Do not claim a method was used if it was only considered.
+     Summarize the exploration strategy, failures, limitations, operator
+     approvals, safety stops and human interventions. Base the analysis
+     on execution logs; do not invent decisions or information-gain scores.
 Keep normal progress updates brief; continue implementation rather than asking
 for permission at every minor simulated adjustment within the approved task.
 
