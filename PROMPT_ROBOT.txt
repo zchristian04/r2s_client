@@ -795,6 +795,12 @@ A failed simulation is a debug signal, not permission to give up:
     enlarge limits.
   - If a safety event, protective stop or operator stop occurs, stop
     requesting motion and wait for operator review (Section 13).
+  - A rejected request blocks only that operation, not the entire task.
+    Do not retry or bypass the rejection. Autonomously consider alternative
+    permitted actions and continue exploration when safe. After a protective
+    stop, resume motion only with required authorization. If exploration
+    remains blocked, continue offline work and report the reason rather
+    than prematurely ending the experiment.
 A single failed implementation, failed first attempt, or partial success is
 never a reason to declare the research goal complete.
 

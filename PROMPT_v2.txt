@@ -836,8 +836,14 @@ A failed simulation is a debug signal, not permission to give up:
   - If budget exhaustion or an unavailable critical tool blocks continuation,
     stop that action and report reproducible evidence. Do not bypass a stop or
     enlarge limits.
+  - A rejected request blocks only that operation, not the entire task.
+    Do not retry or bypass the rejection. Autonomously consider alternative
+    permitted actions and continue exploration when safe. After a protective
+    stop, resume motion only with required authorization. If exploration
+    remains blocked, continue offline work and report the reason rather
+    than prematurely ending the experiment.
 A single failed implementation, failed first attempt, or partial success is
-never a reason to declare the research goal complete.
+never a reason to declare the research goal complete. 
 
 22. Report Contents (report.md)
 -------------------------------
