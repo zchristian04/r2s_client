@@ -815,9 +815,11 @@ never a reason to declare the research goal complete.
   6. What you could not determine, and why.
   7. Per-scene MP4 videos comparing recorded real-world camera observations
      (left) with synchronized digital twin renders (right), including multiple
-     available camera views and representative robot interactions. Save videos
-     under PROJECT_ROOT/outputs/videos/ without requesting extra physical
-     actions solely for video generation; report any unavailable comparisons.
+     available camera views and every executed action, start to finish, not
+     only a representative sample. Save videos under PROJECT_ROOT/outputs/videos/
+     without requesting extra physical actions solely for video generation;
+     report any unavailable comparisons (e.g. a camera view the API never
+     streamed continuously).
   8. Autonomous Agent Analysis (`agent_audit.md`):
      Produce a separate report analyzing the agent's autonomous decisions
      and methods. For each meaningful action, including camera observations
