@@ -353,14 +353,17 @@ claim a backend was tested if it has merely been named in this document.
 -------------------------
 Self-inspect the scene, not merely a human-supplied object list. Inspect its
 geometry, contact areas, support, occlusion, colors, shadows and lighting;
-identify what you need to observe next. Cameras are those listed by /v1/info;
-the fixed camera does not move. The wrist camera moves with the gripper; when
-you use it for a new view, log the full camera pose, calibration and
-visibility. Do not see through objects or claim views you did not capture.
-Keep input images, post-action images and your own validation images distinct.
-Begin with minimal segmentation/tracking and support estimates; add perception
-tools based on measured image and contact failures. Generic image-to-3D
-completions are priors, not hidden surface ground truth.
+identify what you need to observe next. The source world provides two calibrated
+RGB-D cameras: one fixed camera (cam_0) and one mobile wrist-mounted camera (wrist)
+that moves with the robot gripper. The agent may autonomously select feasible
+viewpoints and plan robot movements to acquire informative observations, subject
+to the API's motion capabilities and safety constraints. Do not assume independent
+camera pitch or roll unless supported by the API. For each new viewpoint, log the
+full camera pose, calibration and visibility. Do not see through objects or claim
+views you did not capture. Keep input images, post-action images and your own
+validation images distinct. Begin with minimal segmentation/tracking and support
+estimates; add perception tools based on measured image and contact failures.
+Generic image-to-3D completions are priors, not hidden surface ground truth.
 
 9. Code Repositories
 --------------------
@@ -577,6 +580,20 @@ Lighting and texture (brief Sections III-D and IV-D):
   - Report lighting and texture errors separately from geometry errors: shadow
     position and softness, highlight position, and texture-region colour
     error, each from cameras and object positions not used to fit them.
+  - Active Lighting Exploration: The agent should autonomously decide whether
+    additional observations or interactions are needed to improve identification
+    of lighting, materials, and textures. It may use the fixed camera, feasible
+    wrist-camera viewpoints, and observations of shadows, shading, and highlights
+    to reduce uncertainty about light sources. It should choose informative
+    observations or actions based on expected uncertainty reduction, predictive
+    benefit, safety constraints, and the available budget.
+  - Inverse rendering is permitted for jointly estimating lighting, geometry,
+    surface reflectance, materials, and textures from observed RGB-D images. The
+    agent may choose suitable inverse-rendering models, optimization methods, or
+    other techniques. Evaluate results on observations not used for fitting, and
+    clearly distinguish improvements in rendered appearance from evidence-supported
+    estimates of underlying lighting and material parameters, including remaining
+    uncertainty.
 
 Versioning: save immutable scene versions with parent/source observation/
 parameter changes, provenance, rejected alternatives and consistent compiled
@@ -655,6 +672,9 @@ Submit one twin per seed, as one folder per seed:
     params.json      every estimated quantity per object: value, uncertainty
                      (standard deviation or interval) and whether it was
                      observed, inferred or assumed
+    agent_audit.md   An evidence-based audit of the agent's autonomous
+                     decisions, actions, information gain, model/tool usage,
+                     failures, and adaptations throughout the experiment.
     probe_log.jsonl  the log from Section 10
     claims.json      every claim you make about your twin, one entry each:
                      what is claimed, the value, and the path to the evidence
@@ -767,13 +787,16 @@ What must remain fixed (evaluation integrity, from v2.4):
 20. Records
 -----------
 Inside PROJECT_ROOT, per seed:
-  requests/     every request you sent and every response you received
+  requests/       every request you sent and every response you received
   probe_log.jsonl
-  beliefs/      hypotheses, estimates and uncertainty after each update
-  twins/        each twin version you built, with what changed and why
-  fits/         fitting inputs, losses, gradients and diagnostics
-  compare/      source versus twin images and replayed trajectories
-  submission/   the final twin
+  beliefs/        hypotheses, estimates and uncertainty after each update
+  twins/          each twin version you built, with what changed and why
+  fits/           fitting inputs, losses, gradients and diagnostics
+  compare/        source versus twin images and replayed trajectories
+  submission/     the final twin
+  submission/<seed>/agent_audit.md
+                  Final analysis of autonomous decisions, actions, information
+                  acquisition, and actual tool/model usage
 And for the run: run.json (start time, code and environment hashes, compute
 used) and report.md.
 
@@ -837,7 +860,22 @@ never a reason to declare the research goal complete.
      with synchronized digital twin renders (right), including multiple
      available camera views and representative robot interactions. Save videos
      under PROJECT_ROOT/outputs/videos/ without extra API calls solely for
-    video generation; report any unavailable comparisons.
+     video generation; report any unavailable comparisons.
+  8. Autonomous Agent Analysis (`agent_audit.md`):
+     Produce a separate report analyzing the agent's autonomous decisions
+     and methods. For each meaningful action (including camera movements
+     and contact probes), explain what was done, why it was selected over
+     alternatives, its expected and actual information value, the outcome,
+     and what was learned or improved.
+     Document the algorithms, models, simulators, and tools actually used
+     (e.g., Transformer, VLM, MuJoCo, MJX), including their roles and
+     evidence of use. Do not claim a method was used if it was only considered.
+     Summarize the overall exploration strategy, failures, limitations,
+     and human interventions. Base the analysis on execution logs and
+     recorded evidence; do not invent decisions or information-gain scores.
+     Record the selection rationale for meaningful camera movements and other
+     non-contact observations before execution, so the final audit can distinguish
+     actual decisions from retrospective explanations.
 Keep normal progress updates brief; continue implementation rather than asking
 for permission at every minor simulated adjustment within the approved task.
 
@@ -873,7 +911,7 @@ one.
 Fallback: submission is final, and a long run can be interrupted (context
 limit, crash, time limit). After your first probe, place a crude but runnable
 twin and predictor in submission/ (the predictor must pass its smoke test) and
-overwrite it with each accepted improvement. Add "draft": true to every 
+overwrite it with each accepted improvement. Add "draft": true to every
 claims.json entry while the submission is only a fallback draft. A fallback
 draft is not the official submission, which remains an explicit final step.
 
