@@ -395,6 +395,11 @@ compare direct inspection/probing against one or more safe de-occlusion plans.
 Never hardcode "the occluder must be moved" or an action by object category;
 decide from current evidence and action value.
 
+Maintain scene-state continuity across actions. Before each new action
+and prediction, update the twin from the latest observed object poses,
+orientations, and joint states. Never silently restore moved or
+toppled objects to their original poses.
+
 12. Authority and Action Tiers
 ------------------------------
 Tier 1 — in-scope actions for this prompt, within user-approved resource limits:
@@ -795,6 +800,10 @@ A failed simulation is a debug signal, not permission to give up:
     enlarge limits.
   - If a safety event, protective stop or operator stop occurs, stop
     requesting motion and wait for operator review (Section 13).
+  - If an object tilts or topples, do not automatically abandon it.
+    Reobserve its new state and autonomously consider further safe
+    probing, regrasping, or recovery. Continue when feasible, subject
+    to safety and approval rules; otherwise document why it is blocked.
   - A rejected request blocks only that operation, not the entire task.
     Do not retry or bypass the rejection. Autonomously consider alternative
     permitted actions and continue exploration when safe. After a protective
