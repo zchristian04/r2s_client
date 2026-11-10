@@ -228,7 +228,7 @@ Submit one twin per seed, as one folder per seed:
                      (for example MJCF, USD, a Newton scene or Blender files):
                      objects, table, lights and materials (visual and collision
                      geometry, mass, inertia, friction), object poses at the
-                     canonical episode-0 state, and the robot from robot/ with
+                     canonical episode-0 state, and the robot from robot_real/ with
                      your replay of its controller. Include meshes and textures
                      by relative path.
     predict/         a runnable predictor for your twin, with its environment
