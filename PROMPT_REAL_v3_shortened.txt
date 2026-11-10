@@ -1,0 +1,359 @@
+Agent Handoff: Agentic Real-to-Sim for Robotic Manipulation
+===========================================================
+
+Core task:
+"Reconstruct everything in the observed scene into a high-fidelity digital twin.
+The simulated images should match the source images as closely as possible, and
+the simulated robot interactions must predict new physical outcomes. You must
+independently inspect, experiment, correct, render, compare, and repeat."
+The human specifies the goal, available tools, resource/safety constraints and
+scientific validation — not the sequence of actions. You, the Agent, must
+figure out whether and how to look from another viewpoint, touch, push, grasp,
+lift, turn, relocate an occluder, fit geometry, identify friction or mass, and
+correct material or lighting. Do not ask the user which specific motion to
+perform or require object-specific rules. A tool library is not an action plan.
+The instruction "exactly the same" is the rigorous optimization target, not
+permission to invent a perfect metric, hidden back surfaces or unknown physics.
+Both rendered-image errors and predictive-contact errors must be measured.
+A correct mass with incorrect shape, handle, colors or light is not a finished
+scene; a pretty render with incorrect physical contacts is not a finished twin.
+Preserve negative evidence and report uncertainty rather than faking a 100%
+score. 
+
+You are the implementing research Agent. Do the work; do not merely write a plan.
+Choose the best verified simulator(s) for your
+twin, including MuJoCo/MJX, Isaac Sim, NVIDIA Newton or other suitable engines.
+Reconstruct and compare objects, support, background, basic colors, materials, shadows and illumination — do not
+defer visual verification. High-fidelity renderers and more expressive lighting
+can be added as image residuals show the need. Conversely, do not invent success, cheat by reading held-out
+ground truth, or silently relax metrics.
+
+
+4. Project Summary (for Orientation Only)
+-----------------------------------------
+Goal: From calibrated RGB-D sensing, a known robot model and bounded robot-control
+API, reconstruct an initially unfamiliar workspace into a digital twin that can
+predict robot-object contact outcomes. Here the source world is the real scene;
+its ground truth (object dimensions, masses, poses, friction) is measured by the
+operators and kept hidden from you.
+
+Your job is to turn what you observe and what you learn by
+interacting into a digital twin of that scene.
+
+A good twin does two things:
+  - its rendered images match the camera images (geometry, colors, materials,
+    table, background, lights and shadows), including scene states you never saw;
+  - it predicts new physical outcomes: when robot actions you never executed are
+    run on the real scene, the objects in your twin move the way the real ones do.
+
+This run uses a real robot. Every motion you request is checked by a safety
+layer and runs right away; a human operator watches the arm and holds the
+emergency stop. Real
+sensors are noisy, real objects are not perfect primitives, and nothing you do
+can be undone: there are no resets (Section 5).
+
+Scientific loop: hypothesize -> choose informative probe -> execute -> observe ->
+update uncertainty -> locally refine -> validate on new actions -> repeat.
+
+The target is not only appearance. Visual geometry, collision geometry, joints,
+physical properties, poses, materials and lighting must remain consistent inside
+one canonical scene model. Physical prediction on genuinely new manipulations is
+the primary outcome.
+
+Division of labor:
+  Agent: choose structural hypotheses, unknown regions and safe probes; schedule
+  tools and numerical refinement; interpret residuals; accept/reject versions;
+  in multi-object scenes decide when to directly probe a target versus first
+  clearing an occlusion, using another available camera, or moving a neighbor.
+  Numerical solvers: fit mass, friction, supported contact shape, pose, inertia,
+  joint parameters and appearance/lighting from observations.
+  Robot controller (server side): execute bounded primitives, with independent
+  safety guards.
+  Evaluator (examiner side): assess frozen predictions against hidden truth, not
+  supply hints.
+
+ Everything in a twin render must be simulated: the objects, the robot, the table, the walls, the floor, the background and the lighting. Do not use camera images, crops of them or anything derived pixel by pixel from them as a backdrop, background plate, environment map, texture, mask fill
+  or composite layer, and do not paste or blend observed pixels into a
+  render. Model the background as 3D geometry with fitted colours and materials,
+  and lit by your fitted lights; observed images may only be used as targets to
+  compare against and to fit parameters. A render that contains observed pixels does
+  not count asa reconstruction, and any image-match metric computed on it is
+  invalid.
+
+
+5. The API
+----------
+The server URL and your token are given separately. Every request carries the
+header "Authorization: Bearer <token>". JSON requests; array responses come as
+NumPy .npz files (load with allow_pickle=False) with a JSON string "meta".
+Units are SI (metres, seconds, radians, newtons). World frame: z up, the table
+top is the plane z = 0, origin directly below the robot base; x points away from
+the robot towards the camera, y to the robot's left. The robot base sits on the
+table at (0, 0, 0.0134).
+
+  GET  /v1/info          description, your scene, budgets, cameras,
+                         primitives, logging rate, table extent
+  GET  /v1/budget        remaining budget
+The API calls your scene a "seed"; you have exactly one, listed by /v1/info.
+
+  POST /v1/reset         {"seed": "<your scene>"}  call once, to start; it sends
+                         the robot to its home pose and waits for the operator
+  GET  /v1/calibration   per camera: width, height, K (OpenCV convention),
+                         T_parent_cam, parent frame; depth in metres along the
+                         optical axis, 0 = invalid
+  POST /v1/observe       {"camera": "zed"}
+                         returns rgb, depth, t, tcp_meas, yaw_meas
+  POST /v1/execute       {"primitive": "...", "params": {...}}
+                         returns t, tcp_cmd, tcp_meas, yaw_cmd, yaw_meas,
+                         width_cmd, width_meas, wrench, frame_t, frames_rgb,
+                         frames_depth; meta has status ("ok",
+                         "protective_stop" or "rejected", with a reason) and
+                         events (stop_force, protective_stop, target_not_reached)
+
+There is one camera, "zed": a fixed ZED 2i stereo RGB-D camera, 1280 x 720, in
+front of the robot looking back at it. It never moves. Its depth is computed
+from stereo, not measured directly.
+
+One episode, no resets. The scene as you first see it is the canonical start
+state. Every action changes the real scene, and nobody puts it back: the scene
+you see after an action is the scene your next action acts on. Re-observe after
+every action.
+
+ Actions take tens of seconds: use request timeouts of 10 minutes or
+  more.
+  A protective stop ends the action early, backs off 2 cm, is free, 
+  and you
+  can continue after re-observing. HTTP 409 means the operator must 
+  clear a
+  fault: retry about once a minute. "target_not_reached" means the 
+  arm stopped
+  short; always use tcp_meas, never the commanded target. Force is 
+  estimated
+  from joint torques: about 1 N of noise.
+
+Ensure that there is no bias in perception before performing any actions.
+
+Primitives (the robot is the full arm; you command its gripper):
+  move_to     {tcp: [x,y,z], yaw?, speed?}                         free move
+  home        {}                                                   free move
+  push        {contact_point: [x,y,z], direction: [dx,dy],
+               distance, speed, yaw?}                              contact
+  touch       {point: [x,y,z], direction: [dx,dy,dz], max_travel,
+               speed, stop_force, yaw?}                            contact
+  grasp_lift  {center: [x,y,z], yaw, open_width, lift, hold?}      contact
+
+Each primitive rises to a safe travel height, moves above its start point, does
+its work and returns to the travel height. A touch stops when the measured force
+exceeds stop_force. Any action stops if the force exceeds the protective limit.
+Parameter ranges are enforced by the server; an invalid call is rejected with a
+message and costs nothing.
+
+The robot is a Flexiv Rizon 4s 7-axis arm with a Flexiv Grav (GN01) gripper,
+always pointing straight down; yaw turns it about the vertical. tcp is the
+fingertip point between the fingers (site gn01_grasp_center_site in the model),
+0.198 m from the flange. Its model files are in robot_real/ (rizon4s_gn01.xml;
+frames and wrench conventions in robot_real/README.md). robot/ holds the
+simulated floating-stage robot of the sim exam: do not use it for this cell.
+The arm itself, not only
+the gripper, can touch objects: keep that in mind when you plan and when you
+model contacts. Some targets are out of reach or rejected by the safety layer.
+
+6. Platform Settings (Agent Verifies)
+-------------------------------------
+# --- Project and code ---
+PROJECT_ROOT=<FILL: a new, empty directory created for this run>  # mandatory new workspace
+CODE_DIR=<PROJECT_ROOT>/src
+CODE_REPO=<VERIFY: new workspace repository if any; do not reuse old history blindly>
+CODE_COMMIT=<VERIFY: exact new revision; else source snapshots and SHA256>
+OUT_ROOT=<PROJECT_ROOT>/outputs
+DATA_ROOT=<PROJECT_ROOT>/data
+SCRATCH_DIR=<PROJECT_ROOT>/scratch
+ENV_ROOT=<PROJECT_ROOT>/envs
+CACHE_ROOT=<PROJECT_ROOT>/cache
+SCENE_ROOT=<PROJECT_ROOT>/scenes
+LOG_ROOT=<PROJECT_ROOT>/logs
+RUN_ROOT=<PROJECT_ROOT>/outputs
+first action: verify that PROJECT_ROOT exists and is empty, then create only the
+needed subdirectories there; verify each resolved output path remains under
+PROJECT_ROOT.
+Fresh start: build everything from zero in this run. Do not read, import or
+reuse code, results or data from earlier runs or projects. Existing installed
+libraries and lab simulators may be used read-only; never write into an
+external simulator checkout.
+
+# --- Compute ---
+COMPUTE_HOST=<VERIFY>
+scheduler=<VERIFY: none / slurm / pbs / other>
+SCHED_ACCOUNT=<FILL if needed>
+GPU_TYPE/GPU_COUNT_CURRENT=<VERIFY: hardware and working driver, not assumptions>
+GPU_COUNT_MAX=<FILL/VERIFY: permitted allocation>
+WALLTIME_MAX=<FILL: allowed per-job/runtime budget>
+BASE_PYTHON=<VERIFY: interpreter and environments>
+
+# --- Simulation and rendering: multi-backend, capability-driven ---
+SIM_BACKEND=<choose after verification: MuJoCo / Isaac Sim / NVIDIA Newton / other>
+IDENTIFICATION_BACKEND=<VERIFY: differentiable MJX/Syilen or other tested engine>
+RENDER_BACKEND=<VERIFY: a working RGB/RGB-D renderer; Blender/Cycles optional>
+MJX_LAB_SIM_DIR=<VERIFY: expected /home/jiaxin/projects/Syilen; read-only>
+MJX_LAB_SIM_COMMIT=<VERIFY>
+# Before choosing a parameter fitter, spend a bounded effort reading the entry
+# point of MJX_LAB_SIM_DIR and running a minimal contact example. Try the
+# differentiable route first. If its gradients fail the finite-difference
+# check, fall back to a derivative-free fit and label it as such.
+MUJOCO_VERSION/MJX_VERSION/JAX_VERSION/CUDA=<VERIFY per actual environment>
+ISAAC_SIM_ROOT/ISAAC_SIM_VERSION=<VERIFY if available; never assume installation>
+NEWTON_ROOT/NEWTON_VERSION=<VERIFY if available; never assume capabilities>
+OTHER_BACKEND_ROOT/version=<VERIFY if selected; verify license, APIs and performance>
+BLENDER_BIN/BLENDER_VERSION=<VERIFY when chosen for rendering milestone>
+MITSUBA_ENV=<VERIFY if a fitting experiment requires it>
+
+# --- Robot and sensors ---
+ROBOT_MODEL=Flexiv Rizon 4s with a Flexiv Grav (GN01) gripper; the real arm.
+gripper=Flexiv Grav (GN01) parallel-jaw gripper, 0-0.100 m, 25 N force cap
+FT_SENSOR=external wrench estimated by the arm from joint torques, reported by
+  /v1/execute as "wrench" in the tool frame at the flange, tared at the start
+  of each action (see robot/README.md); VERIFY its frame, bias and noise from
+  your own data
+ROBOT_URDF_MJCF=robot/rizon4s_gn01.xml (MuJoCo: arm, gripper and TCP site;
+  meshes in robot/; frames, base pose and how the server moves the arm in
+  robot/README.md)
+CAMERA=one fixed ZED 2i, "zed"; intrinsics and pose from /v1/calibration
+
+
+17. Submission
+--------------
+Submit one twin per seed, as one folder per seed:
+  <seed>/
+    twin/            the twin in whatever format your chosen engine(s) use
+                     (for example MJCF, USD, a Newton scene or Blender files):
+                     objects, table, lights and materials (visual and collision
+                     geometry, mass, inertia, friction), object poses at the
+                     canonical episode-0 state, and the robot from robot/ with
+                     your replay of its controller. Include meshes and textures
+                     by relative path.
+    predict/         a runnable predictor for your twin, with its environment
+                     (requirements or container), a README saying how to set it
+                     up, and a smoke test. Interface below. Predictor rules: it
+                     must not call any language or vision model or any network
+                     service, and apart from the request and output paths it is
+                     given, it may read only files inside its own submission
+                     folder.
+    params.json      every estimated quantity per object: value, uncertainty
+                     (standard deviation or interval) and whether it was
+                     observed, inferred or assumed
+    probe_log.jsonl  the log from Section 10
+    claims.json      every claim you make about your twin, one entry each:
+                     what is claimed, the value, and the path to the evidence
+    report.md        the report described in Section 22
+
+File formats (one JSON object per entry; field names are required):
+
+params.json is a list of entries such as
+  {"object": "obj_0", "name": "friction_slide", "value": 0.42,
+   "unit": "1", "uncertainty": {"type": "interval", "low": 0.35, "high": 0.50},
+   "status": "inferred", "evidence": "fits/fit_003.json"}
+where status is exactly one of "observed", "inferred", "assumed".
+
+claims.json is a list of entries such as
+  {"claim": "object mass is 0.31 kg", "value": 0.31, "unit": "kg",
+   "status": "inferred", "evidence": "fits/fit_002.json"}
+
+probe_log.jsonl has one JSON object per line. Each probe writes two lines with
+the same probe_id, appended and never edited. Before the action:
+  {"probe_id": "p001", "phase": "plan", "time": "<ISO 8601>",
+   "beliefs": "...", "uncertain": ["..."],
+   "candidates": [{"action": {"primitive": "push", "params": {}},
+                   "expected_reveal": "...", "rejected_because": null}],
+   "chosen": 0, "reason": "...", "decision_source": "judgement|script|both"}
+After the result:
+  {"probe_id": "p001", "phase": "result", "time": "<ISO 8601>",
+   "request_file": "requests/0007.json", "status": "ok",
+   "learned": "..."}
+
+Predictor interface. The evaluator runs, from submission/<seed>/predict/:
+  python predict.py --request request.json --out <dir>
+request.json:
+  {"episodes": [{"actions": [{"primitive": "...", "params": {...}}, ...]}, ...],
+   "views":    [{"name": "...", "width": W, "height": H, "K": [[3x3]],
+                 "T_world_cam": [[4x4]]}, ...],
+   "dt": <sample period in s, the logging rate from /v1/info>}
+  Every episode starts from the canonical start state (the scene as you first
+  observed it) and runs its actions in order (an episode may hold one action or
+  several). Actions use exactly the format of /v1/execute. Cameras use the
+  OpenCV convention, as in /v1/calibration; T_world_cam maps camera to world
+  coordinates. A view without "after" is rendered at the canonical start state;
+  a view with "after": {"episode": e, "action": k} is rendered at the state
+  after that action, once the objects have come to rest.
+Write to <dir>:
+  episodes/<e>/action_<k>.npz  (e, k zero-based) with arrays
+      t [T], tcp [T,3], yaw [T], width [T], wrench [T,6] (tool frame at the
+      flange, [Fx Fy Fz Tx Ty Tz], as the API reports it), obj_pos [T,N,3],
+      obj_quat [T,N,4] (w,x,y,z, world frame), sampled every dt from the start
+      of the action, and a JSON string "meta" with status ("ok" or
+      "protective_stop") and events, named as in the API.
+  views/<name>.npz with rgb uint8 [H,W,3] and depth float32 [H,W] in metres
+      (0 = invalid).
+  objects.json: the object names in the order of the N axis.
+The predictor runs without network access, within 10 minutes per call. A GPU
+may be present but is not guaranteed; say in predict/README whether yours needs
+one and fall back to CPU if it can. If an action fails in your twin, write what
+you have and set status to "error" with a message; do not crash the whole call.
+
+Use the API's conventions: world z up, table top at z = 0, SI units. You choose
+the engine and format; the predictor is what is graded.
+For this run, leave each seed's folder in submission/<seed>/ under PROJECT_ROOT;
+the operator collects it after the run. A twin is final once you write it there
+and mark the seed as submitted in status.json.
+
+
+20. Records
+-----------
+Inside PROJECT_ROOT, per seed:
+  requests/     every request you sent and every response you received
+  probe_log.jsonl
+  beliefs/      hypotheses, estimates and uncertainty after each update
+  twins/        each twin version you built, with what changed and why
+  fits/         fitting inputs, losses, gradients and diagnostics
+  compare/      source versus twin images and replayed trajectories
+  submission/   the final twin
+And for the run: run.json (start time, code and environment hashes, compute
+used) and report.md.
+
+When saving requests, remove the Authorization header (or replace it with
+"Bearer ***"); save the method, path, parameters and body as usual. Never write
+the token into code, configuration files, logs, commits, reports or
+submissions; read it from an environment variable (for example R2S_TOKEN) at
+run time.
+
+Also, from v2.4:
+  status.json       in_progress / passed / failed / blocked + actual last step;
+  attempts/         every failure, stack trace, scene dump, short repro.
+Avoid external auto-writing caches; configure TMPDIR, XDG_CACHE_HOME and
+package/model caches inside PROJECT_ROOT. Absolute tool output paths must
+resolve under PROJECT_ROOT, otherwise reject the write and fix the tool
+configuration before running. No overwrite of old results. Do not spend time
+rendering lengthy marketing videos before your twin predicts well.
+
+22. Report Contents (report.md)
+-------------------------------
+  1. What ran (code paths, commits/hashes, all chosen engines and their exact
+     roles, GPU/CPU, PROJECT_ROOT path and output locations, compute used).
+  2. The exact initial goal prompt, enabled tools and all human interventions;
+     action candidates, feasibility rejections, agent-driven choice, executed
+     actions and replanning.
+  3. Which data you used; exactly when each twin was frozen and submitted.
+  4. Side-by-side source versus rendered frames, image residuals (geometry,
+     colors, shadows/light), and physical errors on your own validation actions
+     with units, compared with your no-probe version.
+  5. What failed, causal diagnostics, controlled changes and remaining unknowns.
+  6. What you could not determine, and why.
+  7. Per-seed MP4 videos comparing recorded source-world observations (left)
+     with synchronized digital twin renders (right), including multiple
+     available camera views and representative robot interactions. Save videos
+     under PROJECT_ROOT/outputs/videos/ without extra API calls solely for
+    video generation; report any unavailable comparisons.
+Keep normal progress updates brief; continue implementation rather than asking
+for permission at every minor simulated adjustment within the approved task.
+
+
+
