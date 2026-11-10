@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GN01 gripper body tree + mount hardware.
+     MUST be included inside the link7 body (it contains bodies/geoms only).
+     Sliced verbatim from /home/lab/projects/real_session_20260913/runs/real-pick-pick_off_t05_review_a0-1211/W_plan_real2sim2real.xml
+     Only absolute asset paths were rewritten. -->
+<mujoco model="flexiv_gn01_gripper_body">
+                    <body name="lab_gn01_tool" pos="0.000000 0.000000 0.124000" quat="-0.00000000 0.00000000 -0.00000000 -1.00000000">
+                      <site name="lab_gn01_tcp_site" group="4" type="sphere" size="0.006" pos="0 0 0.15" rgba="0.0 0.8 0.2 1" />
+                      <site name="lab_gn01_closed_tcp_site" group="4" type="sphere" size="0.006" pos="0 0 0.20" rgba="0.9 0.6 0.0 1" />
+                      <site name="gn01_grasp_center_site" group="4" type="sphere" size="0.008" pos="0.0 0.0 0.198120" rgba="0.0 0.9 0.2 1" />
+                      <body name="gn01_articulated_root" pos="0 0 0" quat="1 0 0 0">
+                        <body name="gn01_unused_finger_width_link" pos="0 0 0">
+                            <inertial pos="0 0 0" mass="0.0001" diaginertia="4e-11 4e-11 4e-11" />
+                          <joint name="gn01_finger_width_joint" type="slide" axis="1 0 0" range="0 0.100" damping="0.03" armature="0.001" />
+                          <geom name="gn01_unused_finger_width_mass" type="sphere" size="0.001" mass="0.0001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                        </body>
+                        <geom name="gn01_base_visual" type="mesh" mesh="gn01_visual_base_mesh" quat="0.70710678 0 0 0.70710678" material="gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                        <geom name="gn01_base_collision" type="mesh" mesh="gn01_collision_base_mesh" quat="0.70710678 0 0 0.70710678" material="lab_collision" group="3" contype="0" conaffinity="0" />
+                        <geom name="gn01_static_assembly_collision" type="mesh" mesh="gn01_collision_static_assembly_mesh" quat="0.70710678 0 0 0.70710678" material="lab_collision" group="3" contype="0" conaffinity="0" />
+                        <body name="gn01_left_outer_bar_body" pos="0 -0.0325 0.0825">
+                          <joint name="gn01_left_outer_knuckle_joint" type="hinge" axis="1 0 0" range="-0.155 0.7854" damping="0.1" armature="0.002" />
+                          <geom name="gn01_left_outer_bar_visual" type="mesh" mesh="gn01_visual_outer_bar_mesh" quat="0.70710678 0 0 0.70710678" material="gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                          <geom name="gn01_left_outer_bar_collision" type="mesh" mesh="gn01_collision_outer_bar_mesh" quat="0.70710678 0 0 0.70710678" material="lab_collision" group="3" contype="0" conaffinity="0" />
+                          <body name="gn01_left_finger_mount_body" pos="0 0 0.058">
+                            <joint name="gn01_left_inner_finger_joint" type="hinge" axis="1 0 0" range="-0.7854 0.155" damping="0.1" armature="0.002" />
+                            <geom name="gn01_left_finger_mount_visual" type="mesh" mesh="gn01_visual_finger_mount_mesh" quat="0.70710678 0 0 0.70710678" material="gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                            <body name="gn01_left_finger_tip_body" pos="0 0.010 0.0235">
+                              <geom name="gn01_left_finger_tip_visual" type="mesh" mesh="gn01_visual_finger_tip_mesh" quat="0.70710678 0 0 0.70710678" material="gn01_tip" group="1" contype="0" conaffinity="0" />
+                              <geom name="gn01_left_finger_tip_collision" type="box" quat="0.015600 -0.002800 0.113800 0.993400" material="lab_collision" group="3" contype="2" conaffinity="1" friction="1.0 0.50 0.02" solref="0.001 1" solimp="0.999 0.9999 0.0001" mass="0.02" pos="0.000104 -0.001030 0.014135" size="0.007400 0.010700 0.018680" />
+                            </body>
+                          </body>
+                        </body>
+                        <body name="gn01_left_inner_bar_body" pos="0 -0.0165 0.0995">
+                          <joint name="gn01_left_inner_knuckle_joint" type="hinge" axis="1 0 0" range="-0.155 0.7854" damping="0.1" armature="0.002" />
+                          <geom name="gn01_left_inner_bar_visual" type="mesh" mesh="gn01_visual_inner_bar_mesh" quat="0.70710678 0 0 0.70710678" material="gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                          <geom name="gn01_left_inner_bar_collision" type="mesh" mesh="gn01_collision_inner_bar_mesh" quat="0.70710678 0 0 0.70710678" material="lab_collision" group="3" contype="0" conaffinity="0" />
+                        </body>
+                        <body name="gn01_right_outer_bar_body" pos="0 0.0325 0.0825" quat="0 0 0 1">
+                          <joint name="gn01_right_outer_knuckle_joint" type="hinge" axis="1 0 0" range="-0.155 0.7854" damping="0.1" armature="0.002" />
+                          <geom name="gn01_right_outer_bar_visual" type="mesh" mesh="gn01_visual_outer_bar_mesh" quat="0.70710678 0 0 0.70710678" material="gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                          <geom name="gn01_right_outer_bar_collision" type="mesh" mesh="gn01_collision_outer_bar_mesh" quat="0.70710678 0 0 0.70710678" material="lab_collision" group="3" contype="0" conaffinity="0" />
+                          <body name="gn01_right_finger_mount_body" pos="0 0 0.058">
+                            <joint name="gn01_right_inner_finger_joint" type="hinge" axis="1 0 0" range="-0.7854 0.155" damping="0.1" armature="0.002" />
+                            <geom name="gn01_right_finger_mount_visual" type="mesh" mesh="gn01_visual_finger_mount_mesh" quat="0.70710678 0 0 0.70710678" material="gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                            <body name="gn01_right_finger_tip_body" pos="0 0.010 0.0235">
+                              <geom name="gn01_right_finger_tip_visual" type="mesh" mesh="gn01_visual_finger_tip_mesh" quat="0.70710678 0 0 0.70710678" material="gn01_tip" group="1" contype="0" conaffinity="0" />
+                              <geom name="gn01_right_finger_tip_collision" type="box" quat="0.015600 -0.002800 0.113800 0.993400" material="lab_collision" group="3" contype="2" conaffinity="1" friction="1.0 0.50 0.02" solref="0.001 1" solimp="0.999 0.9999 0.0001" mass="0.02" pos="0.000104 -0.001030 0.014135" size="0.007400 0.010700 0.018680" />
+                            </body>
+                          </body>
+                        </body>
+                        <body name="gn01_right_inner_bar_body" pos="0 0.0165 0.0995" quat="0 0 0 1">
+                          <joint name="gn01_right_inner_knuckle_joint" type="hinge" axis="1 0 0" range="-0.155 0.7854" damping="0.1" armature="0.002" />
+                          <geom name="gn01_right_inner_bar_visual" type="mesh" mesh="gn01_visual_inner_bar_mesh" quat="0.70710678 0 0 0.70710678" material="gn01_visual_dark" group="1" contype="0" conaffinity="0" />
+                          <geom name="gn01_right_inner_bar_collision" type="mesh" mesh="gn01_collision_inner_bar_mesh" quat="0.70710678 0 0 0.70710678" material="lab_collision" group="3" contype="0" conaffinity="0" />
+                        </body>
+                      </body>
+                    </body>
+                    <geom name="lab_gn01_flange_visual" type="cylinder" pos="0 0 0.083" size="0.050 0.010" material="lab_flange_silver" contype="0" conaffinity="0" group="1" />
+                    <geom name="lab_link7_to_gn01_adapter_visual" type="cylinder" pos="0 0 0.120" size="0.040 0.045" material="gn01_visual_dark" contype="0" conaffinity="0" group="1" />
+</mujoco>

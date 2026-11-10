@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Materials referenced by more than one part file.
+     Sliced verbatim from /home/lab/projects/real_session_20260913/runs/real-pick-pick_off_t05_review_a0-1211/W_plan_real2sim2real.xml
+     Only absolute asset paths were rewritten. -->
+<mujoco model="common_materials">
+  <asset>
+    <material name="lab_object_visual" rgba="0.02 0.02 0.018 1" />
+    <material name="lab_collision" rgba="0.0500 0.4500 0.2500 0.5500" />
+    <material name="lab_flange_silver" rgba="0.6200 0.6400 0.6200 1.0000" />
+  </asset>
+</mujoco>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Flexiv Rizon 4s + Grav (GN01) gripper in the API world frame: table top z = 0,
+     robot base at (0, 0, 0.0134). From newton_handoff_20260921 (scene_robot_only.xml
+     without table, camera and keyframe; base moved down by the 0.020 table top).
+     TCP: site gn01_grasp_center_site. See README.md. -->
+<mujoco model="rizon4s_gn01">
+  <compiler angle="radian" autolimits="true" />
+  <option integrator="implicitfast" cone="elliptic" impratio="10" noslip_iterations="10" />
+  <include file="part_common_materials.xml" />
+  <include file="part_gn01_gripper_assets.xml" />
+  <include file="part_rizon4_arm.xml" />
+</mujoco>
