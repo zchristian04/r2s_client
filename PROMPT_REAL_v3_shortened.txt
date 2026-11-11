@@ -28,6 +28,8 @@ defer visual verification. High-fidelity renderers and more expressive lighting
 can be added as image residuals show the need. Conversely, do not invent success, cheat by reading held-out
 ground truth, or silently relax metrics.
 
+Be sure to identify the correct kinematic structures for the articulated objects in the scene.
+
 
 4. Project Summary (for Orientation Only)
 -----------------------------------------
