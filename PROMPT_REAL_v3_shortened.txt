@@ -1,86 +1,98 @@
-Agent Handoff: Agentic Real-to-Sim for Robotic Manipulation
-===========================================================
+ Agent Handoff: Agentic Real-to-Sim for Robotic Manipulation
+  ===========================================================
 
-Core task:
-"Reconstruct everything in the observed scene into a high-fidelity digital twin.
-The simulated images should match the source images as closely as possible, and
-the simulated robot interactions must predict new physical outcomes. You must
-independently inspect, experiment, correct, render, compare, and repeat."
-The human specifies the goal, available tools, resource/safety constraints and
-scientific validation — not the sequence of actions. You, the Agent, must
-figure out whether and how to look from another viewpoint, touch, push, grasp,
-lift, turn, relocate an occluder, fit geometry, identify friction or mass, and
-correct material or lighting. Do not ask the user which specific motion to
-perform or require object-specific rules. A tool library is not an action plan.
-The instruction "exactly the same" is the rigorous optimization target, not
-permission to invent a perfect metric, hidden back surfaces or unknown physics.
-Both rendered-image errors and predictive-contact errors must be measured.
-A correct mass with incorrect shape, handle, colors or light is not a finished
-scene; a pretty render with incorrect physical contacts is not a finished twin.
-Preserve negative evidence and report uncertainty rather than faking a 100%
-score. 
+  Core task:
+  "Reconstruct everything in the observed scene into a high-fidelity digital twin.
+  The simulated images should match the source images as closely as possible, and
+  the simulated robot interactions must predict new physical outcomes. You must
+  independently inspect, experiment, correct, render, compare, and repeat."
 
-You are the implementing research Agent. Do the work; do not merely write a plan.
-Choose the best verified simulator(s) for your
-twin, including MuJoCo/MJX, Isaac Sim, NVIDIA Newton or other suitable engines.
-Reconstruct and compare objects, support, background, basic colors, materials, shadows and illumination — do not
-defer visual verification. High-fidelity renderers and more expressive lighting
-can be added as image residuals show the need. Conversely, do not invent success, cheat by reading held-out
-ground truth, or silently relax metrics.
+  You are the implementing research Agent. Do the work; do not merely write a plan.
+  The human specifies the goal, tools, resource/safety constraints and scientific
+  validation, not the sequence of actions. You decide whether and how to look from
+  another viewpoint, touch, push, grasp, lift, turn, relocate an occluder, fit
+  geometry, identify friction or mass, and correct material or lighting. Do not ask
+  the user which motion to perform or require object-specific rules. A tool library
+  is not an action plan.
+
+  "Exactly the same" is the optimization target, not permission to invent a perfect
+  metric, hidden back surfaces or unknown physics. Measure both rendered-image
+  errors and predictive-contact errors. A correct mass with incorrect shape, handle,
+  colors or light is not a finished scene; a pretty render with incorrect contacts
+  is not a finished twin. Preserve negative evidence and report uncertainty rather
+  than faking a 100% score. Do not invent success, read held-out ground truth, or
+  silently relax metrics.
+
+  Choose the best verified simulator(s) for your twin. 
+    - possible physics engines: PhysX (via isaac), mujoco, drake 
+    - possible renderers: mujoco native, blender, isaac RTX, 
+  Reconstruct and compare objects, support, background, colors, materials, shadows and illumination; do not      defer visual verification. Add higher-fidelity renderers and richer lighting as image
+  residuals show the need. Identify the correct kinematic structure of any
+  articulated objects.
+
+  You may use separate engines for physics and rendering (e.g. simulate in one,
+  render the resulting poses in another), provided both read the same canonical
+  scene and every rendered frame is driven by simulated state; the evaluator must
+  be able to run your full pipeline from your submission.
+
+
+  Project summary (orientation only)
+  ----------------------------------
+  From calibrated RGB-D sensing, a known robot model and a bounded robot-control
+  API, reconstruct an unfamiliar real workspace into a twin that predicts
+  robot-object contact outcomes. Ground truth (object dimensions, masses, poses,
+  friction) is measured by the operators and hidden from you.
+
+  A good twin:
+    - renders images that match the camera (geometry, colors, materials, table,
+      background, lights, shadows), including scene states you never saw;
+    - predicts new physical outcomes: when unseen robot actions are run on the
+      real scene, your twin's objects move the way the real ones do.
+
+  This is a real robot. Every motion passes a safety layer and runs immediately; a
+  human operator watches with the emergency stop. Sensors are noisy, objects are
+  not perfect primitives, and nothing can be undone: there are no resets
+  (Section 5).
+
+  Scientific loop: hypothesize -> choose informative probe -> execute -> observe ->
+  update uncertainty -> locally refine -> validate on new actions -> repeat.
+
+  Visual geometry, collision geometry, joints, physical properties, poses,
+  materials and lighting must stay consistent in one canonical scene model.
+  Physical prediction on genuinely new manipulations is the primary outcome.
+
+  Division of labor:
+    Agent: chooses structural hypotheses, unknown regions and safe probes; schedules
+    tools and numerical refinement; interprets residuals; accepts/rejects versions;
+    in multi-object scenes, decides when to probe a target directly versus first
+    clearing an occlusion, using another camera, or moving a neighbor.
+    Numerical solvers: fit mass, friction, supported contact shape, pose, inertia,
+    joint parameters and appearance/lighting from observations.
+    Robot controller (server side): executes bounded primitives with independent
+    safety guards.
+    Evaluator (examiner side): assesses frozen predictions against hidden truth;
+    gives no hints.
+
+  Rendering rule
+  --------------
+  Everything in a twin render must be simulated: objects, robot, table, walls,
+  floor, background and lighting. Model the background as 3D geometry with fitted
+  colors and materials, lit by your fitted lights. Observed images may only be
+  used as comparison targets and for fitting parameters. Never use camera images,
+  crops of them, or anything derived pixel by pixel from them as a backdrop,
+  background plate, environment map, texture, mask fill or composite layer, and
+  never paste or blend observed pixels into a render.
+
+  No photo textures: every material must be procedural (shader nodes, built-in
+  textures, flat colors) or come from a standard asset library, with its
+  parameters tuned to match the images. Sampling colors or roughness values from
+  the images is allowed; textures cropped, projected, or generated from them
+  (including by image-conditioned generative models) are not.
+
+  A render that contains observed pixels does not count as a reconstruction, and
+  any image-match metric computed on it is invalid.
 
 Be sure to identify the correct kinematic structures for the articulated objects in the scene.
-
-
-4. Project Summary (for Orientation Only)
------------------------------------------
-Goal: From calibrated RGB-D sensing, a known robot model and bounded robot-control
-API, reconstruct an initially unfamiliar workspace into a digital twin that can
-predict robot-object contact outcomes. Here the source world is the real scene;
-its ground truth (object dimensions, masses, poses, friction) is measured by the
-operators and kept hidden from you.
-
-Your job is to turn what you observe and what you learn by
-interacting into a digital twin of that scene.
-
-A good twin does two things:
-  - its rendered images match the camera images (geometry, colors, materials,
-    table, background, lights and shadows), including scene states you never saw;
-  - it predicts new physical outcomes: when robot actions you never executed are
-    run on the real scene, the objects in your twin move the way the real ones do.
-
-This run uses a real robot. Every motion you request is checked by a safety
-layer and runs right away; a human operator watches the arm and holds the
-emergency stop. Real
-sensors are noisy, real objects are not perfect primitives, and nothing you do
-can be undone: there are no resets (Section 5).
-
-Scientific loop: hypothesize -> choose informative probe -> execute -> observe ->
-update uncertainty -> locally refine -> validate on new actions -> repeat.
-
-The target is not only appearance. Visual geometry, collision geometry, joints,
-physical properties, poses, materials and lighting must remain consistent inside
-one canonical scene model. Physical prediction on genuinely new manipulations is
-the primary outcome.
-
-Division of labor:
-  Agent: choose structural hypotheses, unknown regions and safe probes; schedule
-  tools and numerical refinement; interpret residuals; accept/reject versions;
-  in multi-object scenes decide when to directly probe a target versus first
-  clearing an occlusion, using another available camera, or moving a neighbor.
-  Numerical solvers: fit mass, friction, supported contact shape, pose, inertia,
-  joint parameters and appearance/lighting from observations.
-  Robot controller (server side): execute bounded primitives, with independent
-  safety guards.
-  Evaluator (examiner side): assess frozen predictions against hidden truth, not
-  supply hints.
-
- Everything in a twin render must be simulated: the objects, the robot, the table, the walls, the floor, the background and the lighting. Do not use camera images, crops of them or anything derived pixel by pixel from them as a backdrop, background plate, environment map, texture, mask fill
-  or composite layer, and do not paste or blend observed pixels into a
-  render. Model the background as 3D geometry with fitted colours and materials,
-  and lit by your fitted lights; observed images may only be used as targets to
-  compare against and to fit parameters. A render that contains observed pixels does
-  not count asa reconstruction, and any image-match metric computed on it is
-  invalid.
 
 
 5. The API
