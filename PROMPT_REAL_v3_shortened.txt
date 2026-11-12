@@ -127,7 +127,7 @@ The API calls your scene a "seed"; you have exactly one, listed by /v1/info.
 
 There is one camera, "zed": a fixed ZED 2i stereo RGB-D camera, 1280 x 720, in
 front of the robot looking back at it. It never moves. Its depth is computed
-from stereo, not measured directly.
+from stereo, not measured directly. Ensure you check the calibration settings.
 
 One episode, no resets. The scene as you first see it is the canonical start
 state. Every action changes the real scene, and nobody puts it back: the scene
