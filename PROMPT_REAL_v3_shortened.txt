@@ -26,8 +26,7 @@
   Choose the best verified simulator(s) for your twin. 
     - possible physics engines: PhysX (via isaac), mujoco, drake 
     - possible renderers: mujoco native, blender, isaac RTX, 
-  Reconstruct and compare objects, support, background, colors, materials, shadows and illumination; do not      defer visual verification. Add higher-fidelity renderers and richer lighting as image
-  residuals show the need. Identify the correct kinematic structure of any
+  Reconstruct and compare objects, support, background, colors, materials, shadows and illumination; do not defer visual verification. Add higher-fidelity renderers and richer lighting as image residuals show the need. Identify the correct kinematic structure of any
   articulated objects.
 
   You may use separate engines for physics and rendering (e.g. simulate in one,
