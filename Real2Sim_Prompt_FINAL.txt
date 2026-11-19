@@ -213,7 +213,7 @@ scheduler=<VERIFY: none / slurm / pbs / other>
 SCHED_ACCOUNT=<FILL if needed>
 GPU_TYPE/GPU_COUNT_CURRENT=<VERIFY: hardware and working driver, not assumptions>
 GPU_COUNT_MAX=<FILL/VERIFY: permitted allocation>
-WALLTIME_MAX=<FILL: allowed per-job/runtime budget>
+WALLTIME_MAX=4 hours
 BASE_PYTHON=<VERIFY: interpreter and environments>
 
 # --- Simulation and rendering: multi-backend, capability-driven ---
