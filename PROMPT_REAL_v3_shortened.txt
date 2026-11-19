@@ -24,7 +24,7 @@
   silently relax metrics.
 
   Choose the best verified simulator(s) for your twin. 
-    - possible physics engines: PhysX (via isaac), mujoco, drake 
+    - possible physics engines: PhysX (via isaac), mujoco 
     - possible renderers: mujoco native, blender, isaac RTX, 
   Reconstruct and compare objects, support, background, colors, materials, shadows and illumination; do not defer visual verification. Add higher-fidelity renderers and richer lighting as image residuals show the need. Identify the correct kinematic structure of any
   articulated objects.
@@ -72,6 +72,18 @@
     safety guards.
     Evaluator (examiner side): assesses frozen predictions against hidden truth;
     gives no hints.
+
+Use the full wall time (4 h, API calls included). Submit early only if you can show that no remaining budget or time could reduce your largest errors. Unused time and unused budget earn nothing. Until 20 minutes before the deadline, keep working on whichever error is largest: image error by region, pose and force error on your own held-out actions, or the parameters still marked "assumed". Keep the packaging work (records, predictor, report) within the last 20 minutes.
+
+
+Assumed values. Every value you mark "assumed" in params.json needs a reason in a new file, assumptions.json:
+  - "probe_tried": the probe(s) you ran to identify it, and why they didn't pin it down; 
+  or
+  - "not_identifiable": why no probe available within the API and the remaining budget could identify it, for example mass and friction showing up only as a product in pushes;
+  or
+  - "no_effect": evidence that the value doesn't change any outcome your twin predicts, for example a welded part's mass.
+  An assumed value with none of these counts as unfinished work, not a finished guess. 
+  Before you submit, list each assumed value whose reason is "not_identifiable" and say which probe you would run if you had more budget.
 
   Rendering rule
   --------------
