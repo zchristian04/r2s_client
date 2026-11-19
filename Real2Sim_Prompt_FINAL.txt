@@ -49,6 +49,13 @@
     - predicts new physical outcomes: when unseen robot actions are run on the
       real scene, your twin's objects move the way the real ones do.
 
+  Lights. Your twin must contain the scene's lights: how many, the type of each
+  (point, spot, area, directional, ambient or sky), and each light's position or
+  direction, colour and intensity. They are judged through renders of scene states
+  you never saw. Never bake lighting into textures. Camera exposure and white
+  balance are fixed; do not fit them per image. Mark surfaces you never observed
+  as unobserved.
+
   This is a real robot. Every motion passes a safety layer and runs immediately; a
   human operator watches with the emergency stop. Sensors are noisy, objects are
   not perfect primitives, and nothing can be undone: there are no resets

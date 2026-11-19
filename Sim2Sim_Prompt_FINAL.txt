@@ -45,17 +45,30 @@ A good twin:
   - predicts new physical outcomes: when robot actions you never executed are
     run, your twin's objects move the way the source world's objects do.
 
-Lighting and texture are as important as geometry. Model the lights (number,
-type, position, direction, colour, intensity) from shading, cast shadows and
-highlights, and surfaces as textures where they show patterns, with shine
-estimated from highlights. Never bake lighting into textures: compare images
-before and after an object moves and across cameras to separate light from
-material. Camera exposure and white balance are fixed; do not fit them per
+Lighting and texture are as important as geometry. Lights: your twin must
+contain the scene's lights: how many, the type of each (point, spot, area,
+directional, ambient or sky), and each light's position or direction, colour
+and intensity. They are scored directly against the hidden scene, and through
+renders from views and scene states you never saw. Model surfaces as textures
+where they show patterns, including their shine. Never bake lighting into
+textures. Camera exposure and white balance are fixed; do not fit them per
 image. Mark surfaces you never observed as unobserved.
 
 You should try using algorithms to figure out what the physical and appearance
 parameters are. Examples include (but are by no means limited to) system ID,
 inverse rendering, real2sim, etc.
+
+Use the full wall time (4 h, API calls included). Submit early only if you can show that no remaining budget or time could reduce your largest errors. Unused time and unused budget earn nothing. Until 20 minutes before the deadline, keep working on whichever error is largest: image error by region, pose and force error on your own held-out actions, or the parameters still marked "assumed". Keep the packaging work (records, predictor, report) within the last 20 minutes.
+
+
+Assumed values. Every value you mark "assumed" in params.json needs a reason in a new file, assumptions.json:
+  - "probe_tried": the probe(s) you ran to identify it, and why they didn't pin it down; 
+  or
+  - "not_identifiable": why no probe available within the API and the remaining budget could identify it, for example mass and friction showing up only as a product in pushes;
+  or
+  - "no_effect": evidence that the value doesn't change any outcome your twin predicts, for example a welded part's mass.
+  An assumed value with none of these counts as unfinished work, not a finished guess. 
+  Before you submit, list each assumed value whose reason is "not_identifiable" and say which probe you would run if you had more budget.
 
 Rendering rule
 --------------
@@ -166,8 +179,10 @@ contact_primitives). The first reset is free. Ranges are enforced by the
 server; an invalid call is rejected with a message and costs nothing.
 
 The robot is a Flexiv Grav (GN01) gripper on a floating stage with roll, pitch
-and yaw; its model files are in robot/. Robot, controller and sensors are fixed;
-only the scene is unknown.
+and yaw; its model files are in robot/. Roll and pitch each reach +/-90 degrees
+from straight down and yaw is free; the wrist camera moves and tilts with the
+tool. /v1/info lists the observation budget. Robot, controller and sensors are
+fixed; only the scene is unknown.
 
 
 6. Platform Settings (Agent Verifies)
@@ -199,7 +214,7 @@ scheduler=<VERIFY: none / slurm / pbs / other>
 SCHED_ACCOUNT=<FILL if needed>
 GPU_TYPE/GPU_COUNT_CURRENT=<VERIFY: hardware and working driver, not assumptions>
 GPU_COUNT_MAX=<FILL/VERIFY: permitted allocation>
-WALLTIME_MAX=3 h for the whole run, API calls included; plan for it
+WALLTIME_MAX=4 h for the whole run, API calls included; plan for it
 BASE_PYTHON=<VERIFY: interpreter and environments>
 
 # --- Simulation and rendering: multi-backend, capability-driven ---
@@ -228,7 +243,8 @@ FT_SENSOR=wrist force/torque at the tool flange, reported by /v1/execute as
   robot/README.md); VERIFY its frame, bias and noise from your own data
 ROBOT_MODEL_FILES=robot/ (meshes, stage kinematics, frames, controller and
   wrench conventions in robot/README.md)
-CAMERAS=cam_0 (fixed) and wrist (on the tool; moves and tilts with it), both
+CAMERAS=cam_0 (fixed) and wrist (on the tool; moves and tilts with it, roll and
+  pitch up to +/-90 degrees), both
   RGB-D; intrinsics and poses from /v1/calibration. Log every viewpoint's pose.
 
 
